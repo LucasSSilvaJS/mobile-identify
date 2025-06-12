@@ -109,6 +109,13 @@ export default function DetalhesCasoScreen({ navigation, route }) {
     });
   };
 
+  const handleVerDetalhesVitima = (vitima) => {
+    navigation.navigate('DetalhesVitima', { 
+      vitimaId: vitima._id,
+      vitima: vitima 
+    });
+  };
+
   const handleExcluirVitima = (vitima) => {
     Alert.alert(
       'Excluir Vítima',
@@ -500,7 +507,12 @@ export default function DetalhesCasoScreen({ navigation, route }) {
           
           {caso.vitimas && caso.vitimas.length > 0 ? (
             caso.vitimas.map((vitima, index) => (
-              <View key={vitima._id} style={styles.victimItem}>
+              <TouchableOpacity 
+                key={vitima._id} 
+                style={styles.victimItem}
+                onPress={() => handleVerDetalhesVitima(vitima)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.victimHeader}>
                   <View style={styles.victimInfo}>
                     <Text style={styles.victimTitle}>
@@ -513,15 +525,30 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                   <View style={styles.victimActions}>
                     <TouchableOpacity
                       style={styles.victimActionButton}
-                      onPress={() => handleEditarVitima(vitima)}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleEditarVitima(vitima);
+                      }}
                     >
                       <Ionicons name="create-outline" size={16} color="#007AFF" />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.victimActionButton, styles.deleteButton]}
-                      onPress={() => handleExcluirVitima(vitima)}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleExcluirVitima(vitima);
+                      }}
                     >
                       <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.victimActionButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleVerDetalhesVitima(vitima);
+                      }}
+                    >
+                      <Ionicons name="eye-outline" size={16} color="#10B981" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -558,7 +585,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                     </Text>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           ) : (
             <View style={styles.emptySection}>

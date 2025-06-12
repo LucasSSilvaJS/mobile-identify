@@ -414,4 +414,64 @@ export const relatoriosService = {
   },
 };
 
+// Serviço de Odontogramas
+export const odontogramasService = {
+  // Buscar todos os odontogramas
+  getOdontogramas: async () => {
+    try {
+      const response = await api.get('/odontogramas');
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar odontogramas:', error);
+      throw error.response?.data || { error: 'Erro ao buscar odontogramas' };
+    }
+  },
+
+  // Buscar odontograma por ID
+  getOdontogramaById: async (id) => {
+    try {
+      const response = await api.get(`/odontogramas/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar odontograma:', error);
+      throw error.response?.data || { error: 'Erro ao buscar odontograma' };
+    }
+  },
+
+  // Criar novo odontograma
+  createOdontograma: async (odontogramaData) => {
+    try {
+      const response = await api.post('/odontogramas', odontogramaData);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao criar odontograma:', error);
+      throw error.response?.data || { error: 'Erro ao criar odontograma' };
+    }
+  },
+
+  // Atualizar odontograma
+  updateOdontograma: async (id, odontogramaData) => {
+    try {
+      const response = await api.put(`/odontogramas/${id}`, odontogramaData);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao atualizar odontograma:', error);
+      throw error.response?.data || { error: 'Erro ao atualizar odontograma' };
+    }
+  },
+
+  // Excluir odontograma
+  deleteOdontograma: async (id, idVitima) => {
+    try {
+      const response = await api.delete(`/odontogramas/${id}`, {
+        data: { idVitima }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao excluir odontograma:', error);
+      throw error.response?.data || { error: 'Erro ao excluir odontograma' };
+    }
+  },
+};
+
 export default api; 
