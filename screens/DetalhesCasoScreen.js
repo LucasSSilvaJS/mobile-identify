@@ -11,18 +11,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Importação condicional do mapa
-let MapView, Marker;
-try {
-  const Maps = require('react-native-maps');
-  MapView = Maps.default;
-  Marker = Maps.Marker;
-} catch (error) {
-  console.log('Mapa não disponível:', error);
-  MapView = null;
-  Marker = null;
-}
-
 export default function DetalhesCasoScreen({ navigation, route }) {
   // Dados do caso recebidos via route.params
   const { caso } = route.params || {
@@ -78,52 +66,23 @@ export default function DetalhesCasoScreen({ navigation, route }) {
     </View>
   );
 
-  const MapCard = () => (
+  const SectionCard = ({ title, children }) => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Localização</Text>
-      <View style={styles.mapContainer}>
-        {MapView ? (
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: caso.geolocalizacao?.latitude || caso.latitude || -23.5505,
-              longitude: caso.geolocalizacao?.longitude || caso.longitude || -46.6333,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-          >
-            <Marker
-              coordinate={{
-                latitude: caso.geolocalizacao?.latitude || caso.latitude || -23.5505,
-                longitude: caso.geolocalizacao?.longitude || caso.longitude || -46.6333,
-              }}
-              title={caso.titulo || 'Caso'}
-              description={caso.geolocalizacao?.endereco || caso.localizacao || 'Localização'}
-            />
-          </MapView>
-        ) : (
-          <View style={styles.mapPlaceholder}>
-            <Ionicons name="map-outline" size={48} color="#ccc" />
-            <Text style={styles.mapPlaceholderText}>Mapa não disponível</Text>
-            <Text style={styles.mapPlaceholderSubtext}>
-              Coordenadas: {caso.geolocalizacao?.latitude || caso.latitude || -23.5505}, {caso.geolocalizacao?.longitude || caso.longitude || -46.6333}
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.coordinatesContainer}>
-        <Text style={styles.coordinatesText}>
-          Latitude: {caso.geolocalizacao?.latitude || caso.latitude || -23.5505}
-        </Text>
-        <Text style={styles.coordinatesText}>
-          Longitude: {caso.geolocalizacao?.longitude || caso.longitude || -46.6333}
-        </Text>
-      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {children}
     </View>
+  );
+
+  const ActionButton = ({ title, icon, onPress, color = '#007AFF' }) => (
+    <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+      <Ionicons name={icon} size={24} color={color} />
+      <Text style={[styles.actionButtonText, { color }]}>{title}</Text>
+    </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -132,14 +91,16 @@ export default function DetalhesCasoScreen({ navigation, route }) {
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Detalhes do Caso</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity style={styles.menuButton}>
+          <Ionicons name="ellipsis-vertical" size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          {/* ID e Título */}
-          <View style={styles.titleSection}>
-            <Text style={styles.caseId}>
+          {/* Cabeçalho do Caso */}
+          <View style={styles.caseHeader}>
+            <Text style={styles.caseNumber}>
               {caso.numero || `CASE-${String(caso.id || caso._id || '').slice(-6)}`}
             </Text>
             <Text style={styles.caseTitle}>{caso.titulo}</Text>
@@ -149,10 +110,8 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             </View>
           </View>
 
-          {/* Informações Principais */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Informações Gerais</Text>
-            
+          {/* Informações Básicas */}
+          <SectionCard title="Informações Básicas">
             <InfoCard
               title="Data de Abertura"
               value={caso.dataAbertura ? new Date(caso.dataAbertura).toLocaleDateString('pt-BR') : 'Não informado'}
@@ -170,73 +129,91 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             )}
 
             <InfoCard
-              title="Endereço"
+              title="Localização"
               value={caso.geolocalizacao?.endereco || caso.localizacao || 'Não informado'}
               icon="location-outline"
               color="#FF6B6B"
             />
 
             <InfoCard
-              title="Vítima(s)"
+              title="Vítimas"
               value={caso.vitimas?.length ? `${caso.vitimas.length} vítima(s)` : 'Nenhuma vítima registrada'}
               icon="person-outline"
               color="#845EF7"
             />
-          </View>
+          </SectionCard>
 
           {/* Descrição */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Descrição</Text>
+          <SectionCard title="Descrição">
             <View style={styles.descriptionCard}>
-              <Text style={styles.descriptionText}>{caso.descricao || 'Nenhuma descrição disponível'}</Text>
+              <Text style={styles.descriptionText}>
+                {caso.descricao || 'Nenhuma descrição disponível'}
+              </Text>
             </View>
-          </View>
-
-          {/* Mapa */}
-          <MapCard />
+          </SectionCard>
 
           {/* Evidências */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Evidências</Text>
+          <SectionCard title="Evidências">
             <View style={styles.evidenceCard}>
               <Ionicons name="document-text-outline" size={20} color="#007AFF" />
               <Text style={styles.evidenceText}>
                 {caso.evidencias?.length ? `${caso.evidencias.length} evidência(s)` : 'Nenhuma evidência registrada'}
               </Text>
             </View>
-            <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AdicionarEvidencia')}>
-              <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
-              <Text style={styles.addButtonText}>Adicionar Evidência</Text>
-            </TouchableOpacity>
-          </View>
+            <ActionButton
+              title="Adicionar Evidência"
+              icon="add-circle-outline"
+              onPress={() => navigation.navigate('AdicionarEvidencia')}
+            />
+          </SectionCard>
 
           {/* Vítimas */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Vítimas</Text>
+          <SectionCard title="Vítimas">
             <View style={styles.evidenceCard}>
               <Ionicons name="person-outline" size={20} color="#845EF7" />
               <Text style={styles.evidenceText}>
                 {caso.vitimas?.length ? `${caso.vitimas.length} vítima(s)` : 'Nenhuma vítima registrada'}
               </Text>
             </View>
-            <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AdicionarVitima')}>
-              <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
-              <Text style={styles.addButtonText}>Adicionar Vítima</Text>
-            </TouchableOpacity>
-          </View>
+            <ActionButton
+              title="Adicionar Vítima"
+              icon="add-circle-outline"
+              onPress={() => navigation.navigate('AdicionarVitima')}
+            />
+          </SectionCard>
 
           {/* Relatório */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Relatório</Text>
+          <SectionCard title="Relatório">
             <View style={styles.evidenceCard}>
               <Ionicons name="receipt-outline" size={20} color="#51CF66" />
-              <Text style={styles.evidenceText}>Nenhum relatório adicionado.</Text>
+              <Text style={styles.evidenceText}>Nenhum relatório adicionado</Text>
             </View>
-            <TouchableOpacity style={styles.addButton} onPress={() => alert('Adicionar Relatório')}>
-              <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
-              <Text style={styles.addButtonText}>Adicionar Relatório</Text>
-            </TouchableOpacity>
-          </View>
+            <ActionButton
+              title="Adicionar Relatório"
+              icon="add-circle-outline"
+              onPress={() => alert('Funcionalidade em desenvolvimento')}
+            />
+          </SectionCard>
+
+          {/* Ações */}
+          <SectionCard title="Ações">
+            <ActionButton
+              title="Editar Caso"
+              icon="create-outline"
+              onPress={() => navigation.navigate('EditarCaso', { caso })}
+            />
+            <ActionButton
+              title="Compartilhar"
+              icon="share-outline"
+              onPress={() => alert('Funcionalidade em desenvolvimento')}
+            />
+            <ActionButton
+              title="Excluir Caso"
+              icon="trash-outline"
+              color="#FF3B30"
+              onPress={() => alert('Funcionalidade em desenvolvimento')}
+            />
+          </SectionCard>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -266,8 +243,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  placeholder: {
-    width: 34,
+  menuButton: {
+    padding: 5,
   },
   scrollView: {
     flex: 1,
@@ -275,10 +252,11 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
-  titleSection: {
+  caseHeader: {
     marginBottom: 30,
+    alignItems: 'center',
   },
-  caseId: {
+  caseNumber: {
     fontSize: 14,
     fontWeight: '600',
     color: '#666',
@@ -289,11 +267,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 15,
+    textAlign: 'center',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -367,6 +345,7 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -381,10 +360,6 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 12,
     flex: 1,
-  },
-  actionsSection: {
-    marginTop: 20,
-    marginBottom: 30,
   },
   actionButton: {
     flexDirection: 'row',
@@ -406,83 +381,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
-    marginLeft: 8,
-  },
-  deleteButton: {
-    borderWidth: 1,
-    borderColor: '#FF3B30',
-  },
-  deleteButtonText: {
-    color: '#FF3B30',
-  },
-  mapContainer: {
-    height: 200,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 12,
-    backgroundColor: '#f0f0f0',
-  },
-  map: {
-    flex: 1,
-  },
-  coordinatesContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  coordinatesText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  mapPlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mapPlaceholderText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  mapPlaceholderSubtext: {
-    fontSize: 14,
-    color: '#666',
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 16,
-    marginTop: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
     marginLeft: 8,
   },
 }); 
