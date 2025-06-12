@@ -10,12 +10,14 @@ import {
   RefreshControl,
   SafeAreaView,
   TextInput,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import RelatoriosStats from '../components/RelatoriosStats';
 import NotificationBanner from '../components/NotificationBanner';
 import { useRelatorios } from '../hooks/useRelatorios';
+import { formatarData, formatarDataHora } from '../utils/dateUtils';
 
 export default function RelatoriosScreen({ navigation }) {
   const [filteredRelatorios, setFilteredRelatorios] = useState([]);
@@ -159,34 +161,10 @@ export default function RelatoriosScreen({ navigation }) {
     }
   };
 
-  const formatarData = (dataString) => {
-    if (!dataString) return 'Não informado';
-    try {
-      return new Date(dataString).toLocaleDateString('pt-BR');
-    } catch {
-      return dataString;
-    }
-  };
-
   const formatarHora = (data) => {
     if (!data) return '';
     try {
       return data.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } catch {
-      return '';
-    }
-  };
-
-  const formatarDataHora = (data) => {
-    if (!data) return '';
-    try {
-      return data.toLocaleString('pt-BR', { 
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
         hour: '2-digit', 
         minute: '2-digit' 
       });

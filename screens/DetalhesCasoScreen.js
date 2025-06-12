@@ -18,11 +18,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRelatorios } from '../hooks/useRelatorios';
 import { useVitimas } from '../hooks/useVitimas';
 import { useEvidencias } from '../hooks/useEvidencias';
+import { formatarData } from '../utils/dateUtils';
 
 export default function DetalhesCasoScreen({ navigation, route }) {
   const [caso, setCaso] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { user } = useAuth();
   const { gerarRelatorioIA, excluirRelatorio } = useRelatorios();
   const { excluirVitima } = useVitimas();
@@ -42,14 +44,17 @@ export default function DetalhesCasoScreen({ navigation, route }) {
   // Recarregar dados quando a tela receber foco (ex: ao voltar da edição)
   useFocusEffect(
     React.useCallback(() => {
-      if (casoId) {
+      if (casoId && !isInitialized) {
         console.log('Tela de detalhes recebeu foco - recarregando dados do caso:', casoId);
         carregarCaso();
+        setIsInitialized(true);
       }
-    }, [casoId])
+    }, [casoId, isInitialized])
   );
 
-  const carregarCaso = async () => {
+  const carregarCaso = React.useCallback(async () => {
+    if (!casoId) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -84,7 +89,12 @@ export default function DetalhesCasoScreen({ navigation, route }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [casoId]);
+
+  const forcarRecarregamento = React.useCallback(() => {
+    setIsInitialized(false);
+    carregarCaso();
+  }, [carregarCaso]);
 
   const handleEditarCaso = () => {
     if (caso) {
@@ -98,7 +108,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
         casoId: caso._id,
         onReturn: () => {
           // Recarregar o caso para mostrar a nova evidência
-          carregarCaso();
+          forcarRecarregamento();
         }
       });
     }
@@ -110,8 +120,21 @@ export default function DetalhesCasoScreen({ navigation, route }) {
       evidencia: evidencia,
       onReturn: () => {
         // Recarregar o caso para mostrar as alterações
-        carregarCaso();
+        forcarRecarregamento();
       }
+    });
+  };
+
+  const handleVerImagensEvidencia = (evidencia) => {
+    navigation.navigate('ImagensEvidencia', { 
+      evidenciaId: evidencia._id,
+      evidenciaNome: evidencia.tipo || 'Evidência'
+    });
+  };
+
+  const handleVerDetalhesEvidencia = (evidencia) => {
+    navigation.navigate('DetalhesEvidencia', { 
+      evidenciaId: evidencia._id
     });
   };
 
@@ -142,7 +165,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             text: 'OK',
             onPress: () => {
               // Recarregar o caso para atualizar a interface
-              carregarCaso();
+              forcarRecarregamento();
             }
           }
         ]
@@ -204,7 +227,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             text: 'OK',
             onPress: () => {
               // Recarregar o caso para atualizar a interface
-              carregarCaso();
+              forcarRecarregamento();
             }
           }
         ]
@@ -256,7 +279,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                     text: 'OK',
                     onPress: () => {
                       // Recarregar o caso para mostrar o novo relatório
-                      carregarCaso();
+                      forcarRecarregamento();
                     }
                   }
                 ]
@@ -302,7 +325,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                     text: 'OK',
                     onPress: () => {
                       // Recarregar o caso para atualizar a interface
-                      carregarCaso();
+                      forcarRecarregamento();
                     }
                   }
                 ]
@@ -394,15 +417,6 @@ export default function DetalhesCasoScreen({ navigation, route }) {
     }
   };
 
-  const formatarData = (dataString) => {
-    if (!dataString) return 'Não informado';
-    try {
-      return new Date(dataString).toLocaleDateString('pt-BR');
-    } catch {
-      return dataString;
-    }
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -421,7 +435,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
           <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
           <Text style={styles.errorTitle}>Erro ao carregar caso</Text>
           <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={carregarCaso}>
+          <TouchableOpacity style={styles.retryButton} onPress={forcarRecarregamento}>
             <Text style={styles.retryButtonText}>Tentar novamente</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -526,7 +540,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
               <TouchableOpacity 
                 key={evidencia._id} 
                 style={styles.evidenceItem}
-                onPress={() => handleEditarEvidencia(evidencia)}
+                onPress={() => handleVerDetalhesEvidencia(evidencia)}
                 activeOpacity={0.7}
               >
                 <View style={styles.evidenceHeader}>
@@ -541,7 +555,16 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                       style={styles.evidenceActionButton}
                       onPress={(e) => {
                         e.stopPropagation();
-                        handleEditarEvidencia(evidencia);
+                        handleVerImagensEvidencia(evidencia);
+                      }}
+                    >
+                      <Ionicons name="images-outline" size={16} color="#8B5CF6" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.evidenceActionButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleVerDetalhesEvidencia(evidencia);
                       }}
                     >
                       <Ionicons name="create-outline" size={16} color="#007AFF" />

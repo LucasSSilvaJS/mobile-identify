@@ -9,9 +9,13 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Share,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { relatoriosService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { formatarData } from '../utils/dateUtils';
 
 export default function DetalhesRelatorioScreen({ navigation, route }) {
   const [relatorio, setRelatorio] = useState(null);
@@ -73,21 +77,6 @@ export default function DetalhesRelatorioScreen({ navigation, route }) {
       'Funcionalidade de exportação será implementada em breve.',
       [{ text: 'OK' }]
     );
-  };
-
-  const formatarData = (dataString) => {
-    if (!dataString) return 'Não informado';
-    try {
-      return new Date(dataString).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dataString;
-    }
   };
 
   if (loading) {

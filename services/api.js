@@ -265,7 +265,7 @@ export const vitimasService = {
 
 // Funções para evidências
 export const evidenciasService = {
-  // Listar evidências
+  // Listar todas as evidências
   getEvidencias: async () => {
     try {
       const response = await api.get('/evidencias');
@@ -275,17 +275,17 @@ export const evidenciasService = {
     }
   },
 
-  // Buscar evidência por ID
-  getEvidenciaById: async (id) => {
+  // Buscar evidência específica por ID (com relações populadas)
+  getEvidenciaById: async (evidenciaId) => {
     try {
-      const response = await api.get(`/evidencias/${id}`);
+      const response = await api.get(`/evidencias/${evidenciaId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao buscar evidência' };
     }
   },
 
-  // Criar evidência
+  // Criar nova evidência
   createEvidencia: async (evidenciaData) => {
     try {
       const response = await api.post('/evidencias', evidenciaData);
@@ -296,9 +296,9 @@ export const evidenciasService = {
   },
 
   // Atualizar evidência
-  updateEvidencia: async (id, evidenciaData) => {
+  updateEvidencia: async (evidenciaId, evidenciaData) => {
     try {
-      const response = await api.put(`/evidencias/${id}`, evidenciaData);
+      const response = await api.put(`/evidencias/${evidenciaId}`, evidenciaData);
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao atualizar evidência' };
@@ -306,11 +306,9 @@ export const evidenciasService = {
   },
 
   // Excluir evidência
-  deleteEvidencia: async (id, userId, casoId) => {
+  deleteEvidencia: async (evidenciaId) => {
     try {
-      const response = await api.delete(`/evidencias/${id}`, {
-        data: { userId, casoId }
-      });
+      const response = await api.delete(`/evidencias/${evidenciaId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao excluir evidência' };
@@ -568,6 +566,67 @@ export const odontogramasService = {
     } catch (error) {
       console.error('Erro ao excluir odontograma:', error);
       throw error.response?.data || { error: 'Erro ao excluir odontograma' };
+    }
+  },
+};
+
+// Funções para imagens de evidências
+export const imagensEvidenciaService = {
+  // Listar todas as imagens de uma evidência
+  getImagensEvidencia: async (evidenciaId) => {
+    try {
+      const response = await api.get(`/evidencias/${evidenciaId}/imagens`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar imagens da evidência' };
+    }
+  },
+
+  // Buscar imagem específica por ID
+  getImagemEvidenciaById: async (evidenciaId, imagemId) => {
+    try {
+      const response = await api.get(`/evidencias/${evidenciaId}/imagens/${imagemId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar imagem da evidência' };
+    }
+  },
+
+  // Criar nova imagem para evidência
+  createImagemEvidencia: async (evidenciaId, formData) => {
+    try {
+      const response = await api.post(`/evidencias/${evidenciaId}/imagens`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao criar imagem da evidência' };
+    }
+  },
+
+  // Atualizar imagem de evidência
+  updateImagemEvidencia: async (evidenciaId, imagemId, formData) => {
+    try {
+      const response = await api.put(`/evidencias/${evidenciaId}/imagens/${imagemId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao atualizar imagem da evidência' };
+    }
+  },
+
+  // Excluir imagem de evidência
+  deleteImagemEvidencia: async (evidenciaId, imagemId) => {
+    try {
+      const response = await api.delete(`/evidencias/${evidenciaId}/imagens/${imagemId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao excluir imagem da evidência' };
     }
   },
 };

@@ -23,6 +23,8 @@ import AdicionarRelatorioScreen from './screens/AdicionarRelatorioScreen';
 import DetalhesVitimaScreen from './screens/DetalhesVitimaScreen';
 import AdicionarOdontogramaScreen from './screens/AdicionarOdontogramaScreen';
 import EditarOdontogramaScreen from './screens/EditarOdontogramaScreen';
+import ImagensEvidenciaScreen from './screens/ImagensEvidenciaScreen';
+import DetalhesEvidenciaScreen from './screens/DetalhesEvidenciaScreen';
 
 // Componente da Logo
 import Svg, { Path } from 'react-native-svg';
@@ -63,6 +65,8 @@ function HomeStack() {
       <Stack.Screen name="AdicionarOdontograma" component={AdicionarOdontogramaScreen} />
       <Stack.Screen name="EditarOdontograma" component={EditarOdontogramaScreen} />
       <Stack.Screen name="AdicionarRelatorio" component={AdicionarRelatorioScreen} />
+      <Stack.Screen name="ImagensEvidencia" component={ImagensEvidenciaScreen} />
+      <Stack.Screen name="DetalhesEvidencia" component={DetalhesEvidenciaScreen} />
     </Stack.Navigator>
   );
 }
@@ -85,6 +89,8 @@ function CasosStack() {
       <Stack.Screen name="AdicionarOdontograma" component={AdicionarOdontogramaScreen} />
       <Stack.Screen name="EditarOdontograma" component={EditarOdontogramaScreen} />
       <Stack.Screen name="AdicionarRelatorio" component={AdicionarRelatorioScreen} />
+      <Stack.Screen name="ImagensEvidencia" component={ImagensEvidenciaScreen} />
+      <Stack.Screen name="DetalhesEvidencia" component={DetalhesEvidenciaScreen} />
     </Stack.Navigator>
   );
 }

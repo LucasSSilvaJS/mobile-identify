@@ -9,12 +9,14 @@ import {
   ActivityIndicator,
   SafeAreaView,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { useVitimas } from '../hooks/useVitimas';
 import { useOdontogramas } from '../hooks/useOdontogramas';
+import { formatarData } from '../utils/dateUtils';
 
 export default function DetalhesVitimaScreen({ navigation, route }) {
   const [vitima, setVitima] = useState(null);
@@ -198,15 +200,6 @@ export default function DetalhesVitimaScreen({ navigation, route }) {
         error.error || 'Erro ao excluir odontograma. Tente novamente.',
         [{ text: 'OK' }]
       );
-    }
-  };
-
-  const formatarData = (dataString) => {
-    if (!dataString) return 'Não informado';
-    try {
-      return new Date(dataString).toLocaleDateString('pt-BR');
-    } catch {
-      return dataString;
     }
   };
 
