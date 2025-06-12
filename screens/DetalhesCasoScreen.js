@@ -72,7 +72,9 @@ export default function DetalhesCasoScreen({ navigation, route }) {
         <Ionicons name={icon} size={20} color={color} />
         <Text style={styles.infoTitle}>{title}</Text>
       </View>
-      <Text style={[styles.infoValue, { color }]}>{value}</Text>
+      <Text style={[styles.infoValue, { color }]}>
+        {value || 'Não informado'}
+      </Text>
     </View>
   );
 
@@ -84,19 +86,19 @@ export default function DetalhesCasoScreen({ navigation, route }) {
           <MapView
             style={styles.map}
             initialRegion={{
-              latitude: caso.latitude || -23.5505,
-              longitude: caso.longitude || -46.6333,
+              latitude: caso.geolocalizacao?.latitude || caso.latitude || -23.5505,
+              longitude: caso.geolocalizacao?.longitude || caso.longitude || -46.6333,
               latitudeDelta: 0.01,
               longitudeDelta: 0.01,
             }}
           >
             <Marker
               coordinate={{
-                latitude: caso.latitude || -23.5505,
-                longitude: caso.longitude || -46.6333,
+                latitude: caso.geolocalizacao?.latitude || caso.latitude || -23.5505,
+                longitude: caso.geolocalizacao?.longitude || caso.longitude || -46.6333,
               }}
-              title={caso.titulo}
-              description={caso.localizacao}
+              title={caso.titulo || 'Caso'}
+              description={caso.geolocalizacao?.endereco || caso.localizacao || 'Localização'}
             />
           </MapView>
         ) : (
@@ -104,17 +106,17 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             <Ionicons name="map-outline" size={48} color="#ccc" />
             <Text style={styles.mapPlaceholderText}>Mapa não disponível</Text>
             <Text style={styles.mapPlaceholderSubtext}>
-              Coordenadas: {caso.latitude || -23.5505}, {caso.longitude || -46.6333}
+              Coordenadas: {caso.geolocalizacao?.latitude || caso.latitude || -23.5505}, {caso.geolocalizacao?.longitude || caso.longitude || -46.6333}
             </Text>
           </View>
         )}
       </View>
       <View style={styles.coordinatesContainer}>
         <Text style={styles.coordinatesText}>
-          Latitude: {caso.latitude || -23.5505}
+          Latitude: {caso.geolocalizacao?.latitude || caso.latitude || -23.5505}
         </Text>
         <Text style={styles.coordinatesText}>
-          Longitude: {caso.longitude || -46.6333}
+          Longitude: {caso.geolocalizacao?.longitude || caso.longitude || -46.6333}
         </Text>
       </View>
     </View>
@@ -137,7 +139,9 @@ export default function DetalhesCasoScreen({ navigation, route }) {
         <View style={styles.content}>
           {/* ID e Título */}
           <View style={styles.titleSection}>
-            <Text style={styles.caseId}>{caso.numero || `CASE-${caso.id.padStart(3, '0')}`}</Text>
+            <Text style={styles.caseId}>
+              {caso.numero || `CASE-${String(caso.id || caso._id || '').slice(-6)}`}
+            </Text>
             <Text style={styles.caseTitle}>{caso.titulo}</Text>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(caso.status) }]}>
               <Ionicons name={getStatusIcon(caso.status)} size={16} color="#fff" />
@@ -151,7 +155,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             
             <InfoCard
               title="Data de Abertura"
-              value={caso.dataAbertura}
+              value={caso.dataAbertura ? new Date(caso.dataAbertura).toLocaleDateString('pt-BR') : 'Não informado'}
               icon="calendar-outline"
               color="#007AFF"
             />
@@ -159,7 +163,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             {caso.dataConclusao && (
               <InfoCard
                 title="Data de Conclusão"
-                value={caso.dataConclusao}
+                value={new Date(caso.dataConclusao).toLocaleDateString('pt-BR')}
                 icon="checkmark-circle-outline"
                 color="#51CF66"
               />
@@ -167,14 +171,14 @@ export default function DetalhesCasoScreen({ navigation, route }) {
 
             <InfoCard
               title="Endereço"
-              value={caso.localizacao}
+              value={caso.geolocalizacao?.endereco || caso.localizacao || 'Não informado'}
               icon="location-outline"
               color="#FF6B6B"
             />
 
             <InfoCard
               title="Vítima(s)"
-              value={caso.vitimas}
+              value={caso.vitimas?.length ? `${caso.vitimas.length} vítima(s)` : 'Nenhuma vítima registrada'}
               icon="person-outline"
               color="#845EF7"
             />
@@ -184,7 +188,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Descrição</Text>
             <View style={styles.descriptionCard}>
-              <Text style={styles.descriptionText}>{caso.descricao}</Text>
+              <Text style={styles.descriptionText}>{caso.descricao || 'Nenhuma descrição disponível'}</Text>
             </View>
           </View>
 
@@ -196,7 +200,9 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             <Text style={styles.sectionTitle}>Evidências</Text>
             <View style={styles.evidenceCard}>
               <Ionicons name="document-text-outline" size={20} color="#007AFF" />
-              <Text style={styles.evidenceText}>{caso.evidencia}</Text>
+              <Text style={styles.evidenceText}>
+                {caso.evidencias?.length ? `${caso.evidencias.length} evidência(s)` : 'Nenhuma evidência registrada'}
+              </Text>
             </View>
             <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AdicionarEvidencia')}>
               <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
@@ -209,7 +215,9 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             <Text style={styles.sectionTitle}>Vítimas</Text>
             <View style={styles.evidenceCard}>
               <Ionicons name="person-outline" size={20} color="#845EF7" />
-              <Text style={styles.evidenceText}>{caso.vitimas}</Text>
+              <Text style={styles.evidenceText}>
+                {caso.vitimas?.length ? `${caso.vitimas.length} vítima(s)` : 'Nenhuma vítima registrada'}
+              </Text>
             </View>
             <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AdicionarVitima')}>
               <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
