@@ -179,23 +179,86 @@ export const casosService = {
 
 // Funções para vítimas
 export const vitimasService = {
-  // Listar vítimas
+  // Buscar todas as vítimas
   getVitimas: async () => {
     try {
       const response = await api.get('/vitimas');
       return response.data;
     } catch (error) {
+      console.error('Erro ao buscar vítimas:', error);
       throw error.response?.data || { error: 'Erro ao buscar vítimas' };
     }
   },
 
-  // Criar vítima
+  // Buscar vítima por ID
+  getVitimaById: async (id) => {
+    try {
+      const response = await api.get(`/vitimas/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar vítima:', error);
+      throw error.response?.data || { error: 'Erro ao buscar vítima' };
+    }
+  },
+
+  // Criar nova vítima
   createVitima: async (vitimaData) => {
     try {
       const response = await api.post('/vitimas', vitimaData);
       return response.data;
     } catch (error) {
+      console.error('Erro ao criar vítima:', error);
       throw error.response?.data || { error: 'Erro ao criar vítima' };
+    }
+  },
+
+  // Atualizar vítima
+  updateVitima: async (id, vitimaData) => {
+    try {
+      const response = await api.put(`/vitimas/${id}`, vitimaData);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao atualizar vítima:', error);
+      throw error.response?.data || { error: 'Erro ao atualizar vítima' };
+    }
+  },
+
+  // Excluir vítima
+  deleteVitima: async (id, idCaso) => {
+    try {
+      const response = await api.delete(`/vitimas/${id}`, {
+        data: { idCaso }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao excluir vítima:', error);
+      throw error.response?.data || { error: 'Erro ao excluir vítima' };
+    }
+  },
+
+  // Adicionar odontograma à vítima
+  addOdontogramaToVitima: async (id, odontogramaId) => {
+    try {
+      const response = await api.post(`/vitimas/${id}/odontograma`, {
+        odontogramaId
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao adicionar odontograma:', error);
+      throw error.response?.data || { error: 'Erro ao adicionar odontograma' };
+    }
+  },
+
+  // Remover odontograma da vítima
+  removeOdontogramaFromVitima: async (id, odontogramaId) => {
+    try {
+      const response = await api.delete(`/vitimas/${id}/odontograma`, {
+        data: { odontogramaId }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao remover odontograma:', error);
+      throw error.response?.data || { error: 'Erro ao remover odontograma' };
     }
   },
 };

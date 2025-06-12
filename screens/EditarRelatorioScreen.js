@@ -13,8 +13,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { relatoriosService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useRelatorios } from '../hooks/useRelatorios';
 
 export default function EditarRelatorioScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
@@ -25,6 +25,7 @@ export default function EditarRelatorioScreen({ navigation, route }) {
   const [loadingRelatorio, setLoadingRelatorio] = useState(true);
   const [error, setError] = useState(null);
   const { user } = useAuth();
+  const { atualizarRelatorio } = useRelatorios();
 
   // ID do relatório recebido via route.params
   const { relatorioId, relatorio } = route.params || {};
@@ -49,7 +50,9 @@ export default function EditarRelatorioScreen({ navigation, route }) {
   const carregarRelatorio = async () => {
     try {
       setError(null);
-      const data = await relatoriosService.getRelatorioById(relatorioId);
+      const { carregarRelatorioPorId } = useRelatorios();
+      const data = await carregarRelatorioPorId(relatorioId);
+      
       setFormData({
         titulo: data.titulo || '',
         conteudo: data.conteudo || '',
@@ -90,11 +93,11 @@ export default function EditarRelatorioScreen({ navigation, route }) {
 
       console.log('EditarRelatorio - Dados do relatório a serem enviados:', relatorioData);
 
-      const response = await relatoriosService.updateRelatorio(relatorioId, relatorioData);
+      await atualizarRelatorio(relatorioId, relatorioData);
       
       Alert.alert(
         'Sucesso', 
-        'Relatório atualizado com sucesso!',
+        'Relatório atualizado com sucesso! A lista será atualizada automaticamente.',
         [
           {
             text: 'OK',

@@ -15,14 +15,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { casosService, relatoriosService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useRelatorios } from '../hooks/useRelatorios';
+import { useVitimas } from '../hooks/useVitimas';
 
 export default function DetalhesCasoScreen({ navigation, route }) {
   const [caso, setCaso] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user } = useAuth();
-
-  // ID do caso recebido via route.params
+  const { gerarRelatorioIA, excluirRelatorio } = useRelatorios();
+  const { excluirVitima } = useVitimas();
   const { casoId } = route.params || {};
 
   useEffect(() => {
@@ -100,6 +102,55 @@ export default function DetalhesCasoScreen({ navigation, route }) {
     }
   };
 
+  const handleEditarVitima = (vitima) => {
+    navigation.navigate('EditarVitima', { 
+      vitimaId: vitima._id,
+      vitima: vitima 
+    });
+  };
+
+  const handleExcluirVitima = (vitima) => {
+    Alert.alert(
+      'Excluir Vítima',
+      'Tem certeza que deseja excluir esta vítima? Esta ação não pode ser desfeita e também excluirá todos os odontogramas associados.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => confirmarExclusaoVitima(vitima),
+        },
+      ]
+    );
+  };
+
+  const confirmarExclusaoVitima = async (vitima) => {
+    try {
+      await excluirVitima(vitima._id, caso._id);
+
+      Alert.alert(
+        'Sucesso',
+        'Vítima excluída com sucesso! A lista será atualizada automaticamente.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Recarregar o caso para atualizar a interface
+              carregarCaso();
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Erro ao excluir vítima:', error);
+      Alert.alert(
+        'Erro',
+        error.error || 'Erro ao excluir vítima. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const handleAdicionarRelatorio = () => {
     if (caso) {
       navigation.navigate('AdicionarRelatorio', { casoId: caso._id });
@@ -126,15 +177,12 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                 { cancelable: false }
               );
 
-              const response = await relatoriosService.generateRelatorioWithGemini(
-                caso._id,
-                user?.id || user?._id
-              );
+              await gerarRelatorioIA(caso._id, user?.id || user?._id);
 
               // Fechar o alerta de loading
               Alert.alert(
                 'Sucesso',
-                'Relatório gerado com sucesso!',
+                'Relatório gerado com sucesso! A lista será atualizada automaticamente.',
                 [
                   {
                     text: 'OK',
@@ -172,7 +220,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await relatoriosService.deleteRelatorio(
+              await excluirRelatorio(
                 caso.relatorio._id,
                 user?.id || user?._id,
                 caso._id
@@ -180,7 +228,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
 
               Alert.alert(
                 'Sucesso',
-                'Relatório excluído com sucesso!',
+                'Relatório excluído com sucesso! A lista será atualizada automaticamente.',
                 [
                   {
                     text: 'OK',
@@ -410,8 +458,8 @@ export default function DetalhesCasoScreen({ navigation, route }) {
               <View key={evidencia._id} style={styles.evidenceItem}>
                 <View style={styles.evidenceHeader}>
                   <Text style={styles.evidenceTitle}>Evidência {index + 1}</Text>
-                  <View style={styles.evidenceType}>
-                    <Text style={styles.evidenceTypeText}>{evidencia.tipo}</Text>
+                  <View style={styles.evidenceBadge}>
+                    <Text style={styles.evidenceBadgeText}>{evidencia.tipo}</Text>
                   </View>
                 </View>
                 
@@ -422,9 +470,9 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                   <Text style={styles.evidenceDetail}>
                     <Text style={styles.detailBold}>Status:</Text> {evidencia.status}
                   </Text>
-                  {evidencia.coletadaPor && (
+                  {evidencia.geolocalizacao && (
                     <Text style={styles.evidenceDetail}>
-                      <Text style={styles.detailBold}>Coletada por:</Text> {evidencia.coletadaPor.email || evidencia.coletadaPor.nome || 'Usuário não identificado'}
+                      <Text style={styles.detailBold}>Localização:</Text> {evidencia.geolocalizacao.latitude}, {evidencia.geolocalizacao.longitude}
                     </Text>
                   )}
                 </View>
@@ -454,18 +502,31 @@ export default function DetalhesCasoScreen({ navigation, route }) {
             caso.vitimas.map((vitima, index) => (
               <View key={vitima._id} style={styles.victimItem}>
                 <View style={styles.victimHeader}>
-                  <Text style={styles.victimTitle}>Vítima {index + 1}</Text>
-                  <View style={styles.nicBadge}>
-                    <Text style={styles.nicText}>NIC: {vitima.nic}</Text>
+                  <View style={styles.victimInfo}>
+                    <Text style={styles.victimTitle}>
+                      {vitima.nome || `Vítima ${index + 1}`}
+                    </Text>
+                    <View style={styles.nicBadge}>
+                      <Text style={styles.nicText}>NIC: {vitima.nic}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.victimActions}>
+                    <TouchableOpacity
+                      style={styles.victimActionButton}
+                      onPress={() => handleEditarVitima(vitima)}
+                    >
+                      <Ionicons name="create-outline" size={16} color="#007AFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.victimActionButton, styles.deleteButton]}
+                      onPress={() => handleExcluirVitima(vitima)}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+                    </TouchableOpacity>
                   </View>
                 </View>
                 
                 <View style={styles.victimDetails}>
-                  {vitima.nome && (
-                    <Text style={styles.victimDetail}>
-                      <Text style={styles.detailBold}>Nome:</Text> {vitima.nome}
-                    </Text>
-                  )}
                   {vitima.genero && (
                     <Text style={styles.victimDetail}>
                       <Text style={styles.detailBold}>Gênero:</Text> {vitima.genero}
@@ -479,6 +540,21 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                   {vitima.corEtnia && (
                     <Text style={styles.victimDetail}>
                       <Text style={styles.detailBold}>Cor/Etnia:</Text> {vitima.corEtnia}
+                    </Text>
+                  )}
+                  {vitima.documento && (
+                    <Text style={styles.victimDetail}>
+                      <Text style={styles.detailBold}>Documento:</Text> {vitima.documento}
+                    </Text>
+                  )}
+                  {vitima.endereco && (
+                    <Text style={styles.victimDetail}>
+                      <Text style={styles.detailBold}>Endereço:</Text> {vitima.endereco}
+                    </Text>
+                  )}
+                  {vitima.odontograma && vitima.odontograma.length > 0 && (
+                    <Text style={styles.victimDetail}>
+                      <Text style={styles.detailBold}>Odontogramas:</Text> {vitima.odontograma.length} cadastrado(s)
                     </Text>
                   )}
                 </View>
@@ -725,13 +801,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-  evidenceType: {
+  evidenceBadge: {
     backgroundColor: '#8B5CF6',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  evidenceTypeText: {
+  evidenceBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     color: 'white',
@@ -759,6 +835,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  victimInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   victimTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -774,6 +854,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: 'white',
+  },
+  victimActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  victimActionButton: {
+    padding: 4,
   },
   victimDetails: {
     flex: 1,

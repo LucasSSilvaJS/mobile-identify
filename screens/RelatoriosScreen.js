@@ -12,45 +12,64 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { relatoriosService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import RelatoriosStats from '../components/RelatoriosStats';
+import NotificationBanner from '../components/NotificationBanner';
+import { useRelatorios } from '../hooks/useRelatorios';
 
 export default function RelatoriosScreen({ navigation }) {
-  const [relatorios, setRelatorios] = useState([]);
   const [filteredRelatorios, setFilteredRelatorios] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [sortBy, setSortBy] = useState('date'); // 'date', 'title', 'perito'
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc', 'desc'
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [notification, setNotification] = useState({
+    visible: false,
+    message: '',
+    type: 'success'
+  });
   const { user } = useAuth();
+  
+  // Usar o hook personalizado
+  const { 
+    relatorios, 
+    loading, 
+    error, 
+    lastSync,
+    carregarRelatorios, 
+    excluirRelatorio 
+  } = useRelatorios();
 
-  const carregarRelatorios = async (forceRefresh = false) => {
-    try {
-      setError(null);
-      const data = await relatoriosService.getRelatorios(forceRefresh);
-      setRelatorios(data);
-      setFilteredRelatorios(data);
-    } catch (err) {
-      console.error('Erro ao carregar relatórios:', err);
-      setError(err.error || 'Erro ao carregar relatórios');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await carregarRelatorios(true); // Forçar refresh
-    setRefreshing(false);
-  };
-
+  // Atualizar timestamp quando relatórios mudarem
   useEffect(() => {
-    carregarRelatorios();
-  }, []);
+    if (relatorios.length > 0) {
+      setLastUpdate(new Date());
+    }
+  }, [relatorios]);
+
+  // Mostrar notificação quando a lista for atualizada
+  useEffect(() => {
+    if (lastUpdate && relatorios.length > 0) {
+      showNotification('Lista de relatórios atualizada', 'info');
+    }
+  }, [lastUpdate]);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({
+      visible: true,
+      message,
+      type
+    });
+  };
+
+  const hideNotification = () => {
+    setNotification(prev => ({
+      ...prev,
+      visible: false
+    }));
+  };
 
   useEffect(() => {
     // Filtrar e ordenar relatórios
@@ -92,6 +111,12 @@ export default function RelatoriosScreen({ navigation }) {
     
     setFilteredRelatorios(filtered);
   }, [searchTerm, relatorios, sortBy, sortOrder]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await carregarRelatorios(true); // Forçar refresh
+    setRefreshing(false);
+  };
 
   const handleRelatorioPress = (relatorio) => {
     navigation.navigate('DetalhesRelatorio', { relatorioId: relatorio._id });
@@ -140,6 +165,33 @@ export default function RelatoriosScreen({ navigation }) {
       return new Date(dataString).toLocaleDateString('pt-BR');
     } catch {
       return dataString;
+    }
+  };
+
+  const formatarHora = (data) => {
+    if (!data) return '';
+    try {
+      return data.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  const formatarDataHora = (data) => {
+    if (!data) return '';
+    try {
+      return data.toLocaleString('pt-BR', { 
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch {
+      return '';
     }
   };
 
@@ -199,7 +251,7 @@ export default function RelatoriosScreen({ navigation }) {
           <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
           <Text style={styles.errorTitle}>Erro ao carregar relatórios</Text>
           <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={carregarRelatorios}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => carregarRelatorios(true)}>
             <Text style={styles.retryButtonText}>Tentar novamente</Text>
           </TouchableOpacity>
         </View>
@@ -209,6 +261,15 @@ export default function RelatoriosScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <NotificationBanner
+        visible={notification.visible}
+        message={notification.message}
+        type={notification.type}
+        onClose={hideNotification}
+        autoHide={true}
+        duration={3000}
+      />
+      
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Relatórios</Text>
         <TouchableOpacity style={styles.searchButton} onPress={toggleSearch}>
@@ -254,6 +315,16 @@ export default function RelatoriosScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </View>
+        {lastUpdate && (
+          <Text style={styles.lastUpdateText}>
+            Última atualização: {formatarHora(lastUpdate)}
+            {lastSync && (
+              <Text style={styles.syncText}>
+                {' • Sincronizado: '}{formatarDataHora(lastSync)}
+              </Text>
+            )}
+          </Text>
+        )}
       </View>
 
       {!showSearch && !searchTerm && (
@@ -522,6 +593,16 @@ const styles = StyleSheet.create({
   sortButtonText: {
     fontSize: 16,
     color: '#007AFF',
+    marginLeft: 4,
+  },
+  lastUpdateText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  syncText: {
+    fontSize: 14,
+    color: '#666',
     marginLeft: 4,
   },
 }); 

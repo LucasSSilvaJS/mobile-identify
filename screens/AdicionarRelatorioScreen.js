@@ -12,8 +12,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { relatoriosService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useRelatorios } from '../hooks/useRelatorios';
 
 export default function AdicionarRelatorioScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
@@ -22,6 +22,7 @@ export default function AdicionarRelatorioScreen({ navigation, route }) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
+  const { criarRelatorio } = useRelatorios();
 
   // ID do caso recebido via route.params
   const { casoId } = route.params || {};
@@ -56,11 +57,11 @@ export default function AdicionarRelatorioScreen({ navigation, route }) {
 
       console.log('AdicionarRelatorio - Dados do relatório a serem enviados:', relatorioData);
 
-      const response = await relatoriosService.createRelatorio(relatorioData);
+      await criarRelatorio(relatorioData);
       
       Alert.alert(
         'Sucesso', 
-        'Relatório criado com sucesso!',
+        'Relatório criado com sucesso! A lista será atualizada automaticamente.',
         [
           {
             text: 'OK',

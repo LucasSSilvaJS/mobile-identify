@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { relatoriosService } from '../services/api';
 
 export const useRelatorios = () => {
   const [relatorios, setRelatorios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastSync, setLastSync] = useState(null);
+  const syncIntervalRef = useRef(null);
 
   const carregarRelatorios = useCallback(async (forceRefresh = false) => {
     try {
@@ -12,6 +14,7 @@ export const useRelatorios = () => {
       setLoading(true);
       const data = await relatoriosService.getRelatorios(forceRefresh);
       setRelatorios(data);
+      setLastSync(new Date());
       return data;
     } catch (err) {
       console.error('Erro ao carregar relatórios:', err);
@@ -19,6 +22,16 @@ export const useRelatorios = () => {
       throw err;
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const carregarRelatorioPorId = useCallback(async (id) => {
+    try {
+      const data = await relatoriosService.getRelatorioById(id);
+      return data;
+    } catch (err) {
+      console.error('Erro ao carregar relatório:', err);
+      throw err;
     }
   }, []);
 
@@ -69,18 +82,49 @@ export const useRelatorios = () => {
     }
   }, [carregarRelatorios]);
 
+  // Sincronização automática a cada 30 segundos
+  const iniciarSincronizacao = useCallback(() => {
+    if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+    }
+    
+    syncIntervalRef.current = setInterval(async () => {
+      try {
+        await carregarRelatorios(false); // Não forçar refresh
+      } catch (err) {
+        console.log('Erro na sincronização automática:', err);
+      }
+    }, 30000); // 30 segundos
+  }, [carregarRelatorios]);
+
+  const pararSincronizacao = useCallback(() => {
+    if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+      syncIntervalRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     carregarRelatorios();
-  }, [carregarRelatorios]);
+    iniciarSincronizacao();
+
+    return () => {
+      pararSincronizacao();
+    };
+  }, [carregarRelatorios, iniciarSincronizacao, pararSincronizacao]);
 
   return {
     relatorios,
     loading,
     error,
+    lastSync,
     carregarRelatorios,
+    carregarRelatorioPorId,
     criarRelatorio,
     atualizarRelatorio,
     excluirRelatorio,
     gerarRelatorioIA,
+    iniciarSincronizacao,
+    pararSincronizacao,
   };
 }; 

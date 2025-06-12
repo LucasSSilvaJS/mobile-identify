@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,12 +10,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useVitimas } from '../hooks/useVitimas';
 
-export default function AdicionarVitimaScreen({ navigation, route }) {
+export default function EditarVitimaScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
     nome: '',
     genero: '',
@@ -25,11 +26,55 @@ export default function AdicionarVitimaScreen({ navigation, route }) {
     corEtnia: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingVitima, setLoadingVitima] = useState(true);
+  const [error, setError] = useState(null);
   const { user } = useAuth();
-  const { criarVitima } = useVitimas();
+  const { atualizarVitima, carregarVitimaPorId } = useVitimas();
 
-  // ID do caso recebido via route.params
-  const { casoId } = route.params || {};
+  // ID da vítima recebido via route.params
+  const { vitimaId, vitima } = route.params || {};
+
+  useEffect(() => {
+    if (vitima) {
+      // Se a vítima foi passada como parâmetro, use-a
+      setFormData({
+        nome: vitima.nome || '',
+        genero: vitima.genero || '',
+        idade: vitima.idade ? vitima.idade.toString() : '',
+        documento: vitima.documento || '',
+        endereco: vitima.endereco || '',
+        corEtnia: vitima.corEtnia || '',
+      });
+      setLoadingVitima(false);
+    } else if (vitimaId) {
+      // Se apenas o ID foi passado, carregue a vítima
+      carregarVitima();
+    } else {
+      setError('ID da vítima não fornecido');
+      setLoadingVitima(false);
+    }
+  }, [vitimaId, vitima]);
+
+  const carregarVitima = async () => {
+    try {
+      setError(null);
+      const data = await carregarVitimaPorId(vitimaId);
+      
+      setFormData({
+        nome: data.nome || '',
+        genero: data.genero || '',
+        idade: data.idade ? data.idade.toString() : '',
+        documento: data.documento || '',
+        endereco: data.endereco || '',
+        corEtnia: data.corEtnia || '',
+      });
+    } catch (err) {
+      console.error('Erro ao carregar vítima:', err);
+      setError(err.error || 'Erro ao carregar vítima');
+    } finally {
+      setLoadingVitima(false);
+    }
+  };
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({
@@ -66,8 +111,8 @@ export default function AdicionarVitimaScreen({ navigation, route }) {
       return;
     }
 
-    if (!casoId) {
-      Alert.alert('Erro', 'ID do caso não fornecido');
+    if (!vitimaId) {
+      Alert.alert('Erro', 'ID da vítima não fornecido');
       return;
     }
 
@@ -80,16 +125,15 @@ export default function AdicionarVitimaScreen({ navigation, route }) {
         documento: formData.documento.trim() || undefined,
         endereco: formData.endereco.trim() || undefined,
         corEtnia: formData.corEtnia.trim() || undefined,
-        idCaso: casoId,
       };
 
-      console.log('AdicionarVitima - Dados da vítima a serem enviados:', vitimaData);
+      console.log('EditarVitima - Dados da vítima a serem enviados:', vitimaData);
 
-      await criarVitima(vitimaData);
+      await atualizarVitima(vitimaId, vitimaData);
       
       Alert.alert(
         'Sucesso', 
-        'Vítima criada com sucesso! A lista será atualizada automaticamente.',
+        'Vítima atualizada com sucesso! A lista será atualizada automaticamente.',
         [
           {
             text: 'OK',
@@ -98,8 +142,8 @@ export default function AdicionarVitimaScreen({ navigation, route }) {
         ]
       );
     } catch (error) {
-      console.error('Erro ao criar vítima:', error);
-      Alert.alert('Erro', error.error || 'Erro ao criar vítima');
+      console.error('Erro ao atualizar vítima:', error);
+      Alert.alert('Erro', error.error || 'Erro ao atualizar vítima');
     } finally {
       setIsLoading(false);
     }
@@ -122,6 +166,35 @@ export default function AdicionarVitimaScreen({ navigation, route }) {
     return text;
   };
 
+  if (loadingVitima) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Carregando vítima...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
+          <Text style={styles.errorTitle}>Erro ao carregar vítima</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={carregarVitima}>
+            <Text style={styles.retryButtonText}>Tentar novamente</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>Voltar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -135,7 +208,7 @@ export default function AdicionarVitimaScreen({ navigation, route }) {
           >
             <Ionicons name="arrow-back" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Adicionar Vítima</Text>
+          <Text style={styles.headerTitle}>Editar Vítima</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -145,6 +218,11 @@ export default function AdicionarVitimaScreen({ navigation, route }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.formContainer}>
+            <View style={styles.nicContainer}>
+              <Text style={styles.nicLabel}>NIC (Não editável)</Text>
+              <Text style={styles.nicValue}>{vitima?.nic || 'N/A'}</Text>
+            </View>
+
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Nome *</Text>
               <TextInput
@@ -214,13 +292,6 @@ export default function AdicionarVitimaScreen({ navigation, route }) {
               />
             </View>
 
-            <View style={styles.infoContainer}>
-              <Ionicons name="information-circle-outline" size={20} color="#007AFF" />
-              <Text style={styles.infoText}>
-                O NIC (Número de Identificação do Caso) será gerado automaticamente pelo sistema.
-              </Text>
-            </View>
-
             <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={[styles.cancelButton, isLoading && styles.disabledButton]}
@@ -236,9 +307,9 @@ export default function AdicionarVitimaScreen({ navigation, route }) {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <Text style={styles.submitButtonText}>Criando...</Text>
+                  <Text style={styles.submitButtonText}>Atualizando...</Text>
                 ) : (
-                  <Text style={styles.submitButtonText}>Criar Vítima</Text>
+                  <Text style={styles.submitButtonText}>Atualizar Vítima</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -281,6 +352,25 @@ const styles = StyleSheet.create({
   formContainer: {
     padding: 20,
   },
+  nicContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  nicLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+  },
+  nicValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
   inputContainer: {
     marginBottom: 20,
   },
@@ -299,21 +389,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#e3f2fd',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#1976d2',
-    marginLeft: 8,
-    flex: 1,
-    lineHeight: 20,
-  },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -330,7 +405,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flex: 1,
-    backgroundColor: '#10B981',
+    backgroundColor: '#007AFF',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -349,5 +424,51 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
