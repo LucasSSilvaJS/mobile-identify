@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { casosService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -33,6 +34,16 @@ export default function DetalhesCasoScreen({ navigation, route }) {
       setLoading(false);
     }
   }, [casoId]);
+
+  // Recarregar dados quando a tela receber foco (ex: ao voltar da edição)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (casoId) {
+        console.log('Tela de detalhes recebeu foco - recarregando dados do caso:', casoId);
+        carregarCaso();
+      }
+    }, [casoId])
+  );
 
   const carregarCaso = async () => {
     try {

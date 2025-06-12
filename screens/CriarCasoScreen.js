@@ -23,7 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
-export default function CriarCasoScreen({ navigation }) {
+export default function CriarCasoScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
     titulo: '',
     status: 'Em andamento',
@@ -45,10 +45,56 @@ export default function CriarCasoScreen({ navigation }) {
     longitudeDelta: 0.0421,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [casoId, setCasoId] = useState(null);
 
   const { user } = useAuth(); // Usar o contexto de autenticação
 
   const statusOptions = ['Em andamento', 'Finalizado', 'Arquivado'];
+
+  // Verificar se está editando um caso
+  useEffect(() => {
+    if (route.params?.caso) {
+      const caso = route.params.caso;
+      setIsEditing(true);
+      setCasoId(caso._id);
+      
+      // Preencher formulário com dados do caso
+      setFormData({
+        titulo: caso.titulo || '',
+        status: caso.status || 'Em andamento',
+        descricao: caso.descricao || '',
+        dataAbertura: caso.dataAbertura ? formatarDataParaExibicao(caso.dataAbertura) : '',
+        dataConclusao: caso.dataFechamento ? formatarDataParaExibicao(caso.dataFechamento) : '',
+        localizacao: caso.geolocalizacao ? 
+          `Latitude: ${caso.geolocalizacao.latitude}, Longitude: ${caso.geolocalizacao.longitude}` : '',
+      });
+
+      // Configurar localização do mapa
+      if (caso.geolocalizacao) {
+        const lat = parseFloat(caso.geolocalizacao.latitude);
+        const lng = parseFloat(caso.geolocalizacao.longitude);
+        
+        setMapRegion({
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        });
+        setSelectedLocation({ latitude: lat, longitude: lng });
+      }
+    }
+  }, [route.params]);
+
+  const formatarDataParaExibicao = (dataString) => {
+    if (!dataString) return '';
+    try {
+      const data = new Date(dataString);
+      return data.toLocaleDateString('pt-BR');
+    } catch {
+      return '';
+    }
+  };
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({
@@ -197,23 +243,39 @@ export default function CriarCasoScreen({ navigation }) {
         }
       };
 
-      console.log('CriarCaso - Dados do caso a serem enviados:', casoData);
+      console.log(`${isEditing ? 'Editar' : 'Criar'}Caso - Dados do caso a serem enviados:`, casoData);
 
-      const response = await casosService.createCaso(casoData);
-      
-      Alert.alert(
-        'Sucesso', 
-        'Caso criado com sucesso!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+      let response;
+      if (isEditing && casoId) {
+        // Atualizar caso existente
+        response = await casosService.updateCaso(casoId, casoData);
+        Alert.alert(
+          'Sucesso', 
+          'Caso atualizado com sucesso!',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+      } else {
+        // Criar novo caso
+        response = await casosService.createCaso(casoData);
+        Alert.alert(
+          'Sucesso', 
+          'Caso criado com sucesso!',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+      }
     } catch (error) {
-      console.error('Erro ao criar caso:', error);
-      Alert.alert('Erro', 'Erro ao criar caso');
+      console.error(`Erro ao ${isEditing ? 'atualizar' : 'criar'} caso:`, error);
+      Alert.alert('Erro', `Erro ao ${isEditing ? 'atualizar' : 'criar'} caso`);
     } finally {
       setIsLoading(false);
     }
@@ -272,7 +334,9 @@ export default function CriarCasoScreen({ navigation }) {
           >
             <Ionicons name="arrow-back" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Criar Novo Caso</Text>
+          <Text style={styles.headerTitle}>
+            {isEditing ? 'Editar Caso' : 'Criar Novo Caso'}
+          </Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -387,9 +451,13 @@ export default function CriarCasoScreen({ navigation }) {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <Text style={styles.submitButtonText}>Criando...</Text>
+                  <Text style={styles.submitButtonText}>
+                    {isEditing ? 'Atualizando...' : 'Criando...'}
+                  </Text>
                 ) : (
-                  <Text style={styles.submitButtonText}>Criar Caso</Text>
+                  <Text style={styles.submitButtonText}>
+                    {isEditing ? 'Atualizar Caso' : 'Criar Caso'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>

@@ -42,6 +42,7 @@ function HomeStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="CriarCaso" component={CriarCasoScreen} />
+      <Stack.Screen name="EditarCaso" component={CriarCasoScreen} />
       <Stack.Screen name="DetalhesCaso" component={DetalhesCasoScreen} />
       <Stack.Screen name="AdicionarEvidencia" component={AdicionarEvidenciaScreen} />
       <Stack.Screen name="AdicionarVitima" component={AdicionarVitimaScreen} />
@@ -55,6 +56,7 @@ function CasosStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CasosMain" component={CasosScreen} />
       <Stack.Screen name="CriarCaso" component={CriarCasoScreen} />
+      <Stack.Screen name="EditarCaso" component={CriarCasoScreen} />
       <Stack.Screen name="DetalhesCaso" component={DetalhesCasoScreen} />
       <Stack.Screen name="AdicionarEvidencia" component={AdicionarEvidenciaScreen} />
       <Stack.Screen name="AdicionarVitima" component={AdicionarVitimaScreen} />
