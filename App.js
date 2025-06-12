@@ -3,9 +3,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView, Platform, StatusBar } from 'react-native';
+import { SafeAreaView, Platform, StatusBar, ActivityIndicator, View } from 'react-native';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Importar telas
+import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import CasosScreen from './screens/CasosScreen';
 import CriarCasoScreen from './screens/CriarCasoScreen';
@@ -60,7 +62,26 @@ function CasosStack() {
   );
 }
 
-export default function App() {
+// Componente principal da aplicação
+function AppContent() {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8f9fa', justifyContent: 'center', alignItems: 'center' }}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+        <View style={{ alignItems: 'center' }}>
+          <Logo width={200} height={54} color="#123458" />
+          <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 30 }} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
@@ -74,7 +95,7 @@ export default function App() {
                 iconName = focused ? 'analytics' : 'analytics-outline';
               } else if (route.name === 'Casos') {
                 iconName = focused ? 'folder' : 'folder-outline';
-}
+              }
 
               return <Ionicons name={iconName} size={size} color={color} />;
             },
@@ -82,7 +103,7 @@ export default function App() {
             tabBarInactiveTintColor: 'gray',
             headerShown: false,
             tabBarStyle: {
-    backgroundColor: '#fff',
+              backgroundColor: '#fff',
               borderTopWidth: 1,
               borderTopColor: '#eee',
               paddingBottom: Platform.OS === 'ios' ? 20 : 10,
@@ -104,7 +125,7 @@ export default function App() {
             },
             tabBarIconStyle: {
               marginTop: 5,
-  },
+            },
           })}
         >
           <Tab.Screen 
@@ -120,5 +141,13 @@ export default function App() {
         </Tab.Navigator>
       </NavigationContainer>
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

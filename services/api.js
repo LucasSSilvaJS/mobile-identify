@@ -1,0 +1,183 @@
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Configuração base do axios
+const api = axios.create({
+  baseURL: 'https://backend-pi-26cz.onrender.com',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para adicionar token em todas as requisições
+api.interceptors.request.use(
+  async (config) => {
+    const token = await AsyncStorage.getItem('@auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para tratar erros de resposta
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Token expirado ou inválido
+      await AsyncStorage.removeItem('@auth_token');
+      await AsyncStorage.removeItem('@user_data');
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Funções de autenticação
+export const authService = {
+  // Login
+  login: async (email, password) => {
+    try {
+      const response = await api.post('/auth/login', {
+        email,
+        password,
+      });
+      
+      // Salvar token e dados do usuário
+      await AsyncStorage.setItem('@auth_token', response.data.user.token);
+      await AsyncStorage.setItem('@user_data', JSON.stringify(response.data.user));
+      
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro de conexão' };
+    }
+  },
+
+  // Logout
+  logout: async () => {
+    try {
+      await AsyncStorage.removeItem('@auth_token');
+      await AsyncStorage.removeItem('@user_data');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  },
+
+  // Verificar se está logado
+  isAuthenticated: async () => {
+    try {
+      const token = await AsyncStorage.getItem('@auth_token');
+      return !!token;
+    } catch (error) {
+      return false;
+    }
+  },
+
+  // Obter dados do usuário
+  getUserData: async () => {
+    try {
+      const userData = await AsyncStorage.getItem('@user_data');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      return null;
+    }
+  },
+};
+
+// Funções para casos
+export const casosService = {
+  // Listar casos
+  getCasos: async () => {
+    try {
+      const response = await api.get('/casos');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar casos' };
+    }
+  },
+
+  // Criar caso
+  createCaso: async (casoData) => {
+    try {
+      const response = await api.post('/casos', casoData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao criar caso' };
+    }
+  },
+
+  // Obter caso por ID
+  getCasoById: async (id) => {
+    try {
+      const response = await api.get(`/casos/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar caso' };
+    }
+  },
+};
+
+// Funções para vítimas
+export const vitimasService = {
+  // Listar vítimas
+  getVitimas: async () => {
+    try {
+      const response = await api.get('/vitimas');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar vítimas' };
+    }
+  },
+
+  // Criar vítima
+  createVitima: async (vitimaData) => {
+    try {
+      const response = await api.post('/vitimas', vitimaData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao criar vítima' };
+    }
+  },
+};
+
+// Funções para evidências
+export const evidenciasService = {
+  // Listar evidências
+  getEvidencias: async () => {
+    try {
+      const response = await api.get('/evidencias');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar evidências' };
+    }
+  },
+
+  // Criar evidência
+  createEvidencia: async (evidenciaData) => {
+    try {
+      const response = await api.post('/evidencias', evidenciaData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao criar evidência' };
+    }
+  },
+};
+
+// Funções para dashboard
+export const dashboardService = {
+  // Obter estatísticas gerais do dashboard
+  getEstatisticasGerais: async () => {
+    try {
+      const response = await api.get('/dashboard/estatisticas-gerais');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar estatísticas do dashboard' };
+    }
+  },
+};
+
+export default api; 

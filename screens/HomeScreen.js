@@ -10,16 +10,34 @@ import {
   useWindowDimensions,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { PieChart, BarChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
+import { dashboardService } from '../services/api';
 
 export default function HomeScreen() {
   const { width, height } = useWindowDimensions();
   const [isLandscape, setIsLandscape] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const navigation = useNavigation();
+  const { logout, user } = useAuth();
+
+  // Estados para dados do dashboard
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalCasos: 0,
+    totalEvidencias: 0,
+    totalVitimas: 0,
+  });
+  const [statusData, setStatusData] = useState([]);
+  const [casosPorMes, setCasosPorMes] = useState({
+    labels: [],
+    datasets: [{ data: [] }],
+  });
 
   // Detectar mudanças de orientação e tamanho de tela
   useEffect(() => {
@@ -31,44 +49,68 @@ export default function HomeScreen() {
     checkOrientation();
   }, [width, height]);
 
-  const [stats] = useState({
-    totalCasos: 156,
-    totalEvidencias: 423,
-    totalVitimas: 89,
-  });
+  // Buscar dados do dashboard
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const [statusData] = useState([
-    {
-      name: 'Em Andamento',
-      population: 67,
-      color: '#FF6B6B',
-      legendFontColor: '#7F7F7F',
-      legendFontSize: isTablet ? 14 : 12,
-    },
-    {
-      name: 'Finalizados',
-      population: 45,
-      color: '#51CF66',
-      legendFontColor: '#7F7F7F',
-      legendFontSize: isTablet ? 14 : 12,
-    },
-    {
-      name: 'Arquivados',
-      population: 44,
-      color: '#845EF7',
-      legendFontColor: '#7F7F7F',
-      legendFontSize: isTablet ? 14 : 12,
-    },
-  ]);
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const data = await dashboardService.getEstatisticasGerais();
+      
+      // Atualizar estatísticas gerais
+      setStats({
+        totalCasos: data.totalCasos,
+        totalEvidencias: data.totalEvidencias,
+        totalVitimas: data.totalVitimas,
+      });
 
-  const [casosPorMes] = useState({
-    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai'],
-    datasets: [
-      {
-        data: [12, 18, 25, 22, 15],
-      },
-    ],
-  });
+      // Processar dados de status para o gráfico de pizza
+      const statusChartData = [
+        {
+          name: 'Em Andamento',
+          population: data.casosPorStatus['Em andamento'] || 0,
+          color: '#FF6B6B',
+          legendFontColor: '#7F7F7F',
+          legendFontSize: isTablet ? 14 : 12,
+        },
+        {
+          name: 'Finalizados',
+          population: data.casosPorStatus['Finalizado'] || 0,
+          color: '#51CF66',
+          legendFontColor: '#7F7F7F',
+          legendFontSize: isTablet ? 14 : 12,
+        },
+        {
+          name: 'Arquivados',
+          population: data.casosPorStatus['Arquivado'] || 0,
+          color: '#845EF7',
+          legendFontColor: '#7F7F7F',
+          legendFontSize: isTablet ? 14 : 12,
+        },
+      ];
+      setStatusData(statusChartData);
+
+      // Processar dados de casos por mês para o gráfico de barras
+      const labels = data.casosPorMes.map(item => {
+        const mes = item.mes.substring(0, 3); // Primeiras 3 letras do mês
+        return mes;
+      });
+      const valores = data.casosPorMes.map(item => item.quantidade);
+
+      setCasosPorMes({
+        labels: labels,
+        datasets: [{ data: valores }],
+      });
+
+    } catch (error) {
+      console.error('Erro ao buscar dados do dashboard:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os dados do dashboard. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Configurações responsivas para gráficos
   const getChartWidth = () => {
@@ -147,26 +189,66 @@ export default function HomeScreen() {
     navigation.navigate('CriarCaso');
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Sair',
+      'Tem certeza que deseja sair da aplicação?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: logout,
+        },
+      ]
+    );
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Carregando dashboard...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={isTablet && styles.scrollViewTablet}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={fetchDashboardData} />
+        }
       >
         {/* Header */}
         <View style={[
           styles.header,
           isTablet && styles.headerTablet
         ]}>
-          <Text style={[
-            styles.headerTitle,
-            isTablet && styles.headerTitleTablet
-          ]}>Dashboard</Text>
-          <Text style={[
-            styles.headerSubtitle,
-            isTablet && styles.headerSubtitleTablet
-          ]}>Visão geral dos casos</Text>
+          <View style={styles.headerLeft}>
+            <Text style={[
+              styles.headerTitle,
+              isTablet && styles.headerTitleTablet
+            ]}>Dashboard</Text>
+            <Text style={[
+              styles.headerSubtitle,
+              isTablet && styles.headerSubtitleTablet
+            ]}>Visão geral dos casos</Text>
+          </View>
+          <View style={styles.headerRight}>
+            <Text style={styles.userInfo}>Olá, {user?.username || 'Usuário'}</Text>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Cards de Estatísticas */}
@@ -201,7 +283,7 @@ export default function HomeScreen() {
           <View style={styles.pieChartCard}>
             <PieChart
               data={statusData}
-              paddingLeft='50' //gambiarra
+              paddingLeft='50'
               width={200}
               height={200}
               chartConfig={pieChartConfig}
@@ -237,7 +319,6 @@ export default function HomeScreen() {
             isTablet && styles.chartTitleTablet
           ]}>Casos por Mês</Text>
           <BarChart
-            
             data={casosPorMes}
             width={getChartWidth()}
             height={getChartHeight()}
@@ -282,10 +363,20 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 10 : 20,
     backgroundColor: '#fff',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   headerTablet: {
     paddingHorizontal: 40,
     paddingTop: Platform.OS === 'ios' ? 20 : 40,
+  },
+  headerLeft: {
+    flexDirection: 'column',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 28,
@@ -302,6 +393,14 @@ const styles = StyleSheet.create({
   },
   headerSubtitleTablet: {
     fontSize: 20,
+  },
+  userInfo: {
+    fontSize: 16,
+    color: '#666',
+    marginRight: 10,
+  },
+  logoutButton: {
+    padding: 5,
   },
   statsContainer: {
     padding: 20,
@@ -470,5 +569,16 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     bottom: Platform.OS === 'ios' ? 120 : 100,
     right: 30,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 20,
   },
 }); 
