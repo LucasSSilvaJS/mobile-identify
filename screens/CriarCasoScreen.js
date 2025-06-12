@@ -12,6 +12,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function CriarCasoScreen({ navigation }) {
   const [formData, setFormData] = useState({
@@ -22,6 +23,9 @@ export default function CriarCasoScreen({ navigation }) {
     dataConclusao: '',
     localizacao: '',
   });
+
+  const [showDatePickerAbertura, setShowDatePickerAbertura] = useState(false);
+  const [showDatePickerConclusao, setShowDatePickerConclusao] = useState(false);
 
   const statusOptions = ['Em andamento', 'Finalizado', 'Arquivado'];
 
@@ -74,6 +78,21 @@ export default function CriarCasoScreen({ navigation }) {
         }
       ]
     );
+  };
+
+  const onDateChange = (event, selectedDate, field) => {
+    if (Platform.OS === 'android') {
+      if (field === 'dataAbertura') {
+        setShowDatePickerAbertura(false);
+      } else {
+        setShowDatePickerConclusao(false);
+      }
+    }
+    if (selectedDate) {
+      const currentDate = selectedDate || new Date();
+      const formattedDate = currentDate.toLocaleDateString('pt-BR');
+      updateFormData(field, formattedDate);
+    }
   };
 
   const StatusSelector = () => (
@@ -176,27 +195,45 @@ export default function CriarCasoScreen({ navigation }) {
               <View style={styles.halfWidth}>
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Data de Abertura</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.dataAbertura}
-                    onChangeText={(text) => updateFormData('dataAbertura', text)}
-                    placeholder="DD/MM/AAAA"
-                    placeholderTextColor="#999"
-                    keyboardType="numeric"
-                  />
+                  <TouchableOpacity onPress={() => setShowDatePickerAbertura(true)}>
+                    <View style={styles.dateInput}>
+                      <Text style={formData.dataAbertura ? styles.dateText : styles.placeholderTextDate}>
+                        {formData.dataAbertura || "DD/MM/AAAA"}
+                      </Text>
+                      <Ionicons name="calendar" size={20} color="#999" />
+                    </View>
+                  </TouchableOpacity>
+                  {showDatePickerAbertura && (
+                    <DateTimePicker
+                      testID="datePickerAbertura"
+                      value={formData.dataAbertura ? new Date(formData.dataAbertura.split('/').reverse().join('-')) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => onDateChange(event, selectedDate, 'dataAbertura')}
+                    />
+                  )}
                 </View>
               </View>
               <View style={styles.halfWidth}>
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Data de Conclusão</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.dataConclusao}
-                    onChangeText={(text) => updateFormData('dataConclusao', text)}
-                    placeholder="DD/MM/AAAA"
-                    placeholderTextColor="#999"
-                    keyboardType="numeric"
-                  />
+                  <TouchableOpacity onPress={() => setShowDatePickerConclusao(true)}>
+                    <View style={styles.dateInput}>
+                      <Text style={formData.dataConclusao ? styles.dateText : styles.placeholderTextDate}>
+                        {formData.dataConclusao || "DD/MM/AAAA"}
+                      </Text>
+                      <Ionicons name="calendar" size={20} color="#999" />
+                    </View>
+                  </TouchableOpacity>
+                  {showDatePickerConclusao && (
+                    <DateTimePicker
+                      testID="datePickerConclusao"
+                      value={formData.dataConclusao ? new Date(formData.dataConclusao.split('/').reverse().join('-')) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => onDateChange(event, selectedDate, 'dataConclusao')}
+                    />
+                  )}
                 </View>
               </View>
             </View>
@@ -370,5 +407,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fff',
+    justifyContent: 'space-between',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  placeholderTextDate: {
+    fontSize: 16,
+    color: '#999',
   },
 }); 
