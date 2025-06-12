@@ -17,6 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
+import { casosService, authService } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -41,6 +44,9 @@ export default function CriarCasoScreen({ navigation }) {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { user } = useAuth(); // Usar o contexto de autenticação
 
   const statusOptions = ['Em andamento', 'Finalizado', 'Arquivado'];
 
@@ -102,39 +108,115 @@ export default function CriarCasoScreen({ navigation }) {
     }
   };
 
-  const handleSubmit = () => {
-    // Validação básica
-    if (!formData.titulo.trim()) {
-      Alert.alert('Erro', 'Por favor, insira o título do caso');
+  const formatarDataParaAPI = (dataString) => {
+    if (!dataString) return null;
+    
+    // Converte DD/MM/AAAA para YYYY-MM-DD
+    const partes = dataString.split('/');
+    if (partes.length === 3) {
+      return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+    }
+    return null;
+  };
+
+  const parsearCoordenadas = (coordenadasString) => {
+    if (!coordenadasString) return null;
+    
+    try {
+      const latMatch = coordenadasString.match(/Latitude: ([\d.-]+)/);
+      const lngMatch = coordenadasString.match(/Longitude: ([\d.-]+)/);
+      
+      if (latMatch && lngMatch) {
+        return {
+          latitude: latMatch[1],
+          longitude: lngMatch[1]
+        };
+      }
+    } catch (error) {
+      console.error('Erro ao parsear coordenadas:', error);
+    }
+    
+    return null;
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.titulo || !formData.descricao || !formData.status || !formData.dataAbertura) {
+      Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
       return;
     }
 
-    if (!formData.descricao.trim()) {
-      Alert.alert('Erro', 'Por favor, insira a descrição do caso');
+    // Verificar se há localização selecionada
+    const coordenadas = parsearCoordenadas(formData.localizacao);
+    if (!coordenadas) {
+      Alert.alert('Erro', 'Selecione uma localização no mapa');
       return;
     }
 
-    if (!formData.dataAbertura.trim()) {
-      Alert.alert('Erro', 'Por favor, insira a data de abertura');
-      return;
-    }
-
-    if (!formData.localizacao.trim()) {
-      Alert.alert('Erro', 'Por favor, capture a localização do caso');
-      return;
-    }
-
-    // Simular criação do caso
-    Alert.alert(
-      'Sucesso',
-      'Caso criado com sucesso!',
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack()
+    setIsLoading(true);
+    try {
+      // Obter dados do usuário do contexto ou AsyncStorage
+      let userData = null;
+      
+      if (user) {
+        userData = user;
+      } else {
+        const savedUserData = await AsyncStorage.getItem('@user_data');
+        if (savedUserData) {
+          userData = JSON.parse(savedUserData);
         }
-      ]
-    );
+      }
+      
+      if (!userData || !userData.id) {
+        Alert.alert('Erro', 'Usuário não autenticado. Faça login novamente.');
+        return;
+      }
+
+      // Converter data do formato brasileiro (DD/MM/AAAA) para ISO
+      const converterDataParaISO = (dataString) => {
+        if (!dataString) return null;
+        const partes = dataString.split('/');
+        if (partes.length === 3) {
+          const dia = parseInt(partes[0]);
+          const mes = parseInt(partes[1]) - 1; // Mês começa em 0
+          const ano = parseInt(partes[2]);
+          return new Date(ano, mes, dia).toISOString();
+        }
+        return null;
+      };
+
+      const casoData = {
+        userId: userData.id,
+        titulo: formData.titulo,
+        descricao: formData.descricao,
+        status: formData.status,
+        dataAbertura: converterDataParaISO(formData.dataAbertura),
+        dataFechamento: formData.dataConclusao ? converterDataParaISO(formData.dataConclusao) : null,
+        geolocalizacao: {
+          latitude: coordenadas.latitude.toString(),
+          longitude: coordenadas.longitude.toString()
+        }
+      };
+
+      console.log('CriarCaso - Dados do caso a serem enviados:', casoData);
+
+      const response = await casosService.createCaso(casoData);
+      
+      Alert.alert(
+        'Sucesso', 
+        'Caso criado com sucesso!',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Erro ao criar caso:', error);
+      Alert.alert('Erro', 'Erro ao criar caso');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const onDateChange = (event, selectedDate, field) => {
@@ -292,17 +374,23 @@ export default function CriarCasoScreen({ navigation }) {
 
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={styles.cancelButton}
+                style={[styles.cancelButton, isLoading && styles.disabledButton]}
                 onPress={() => navigation.goBack()}
+                disabled={isLoading}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.submitButton}
+                style={[styles.submitButton, isLoading && styles.disabledButton]}
                 onPress={handleSubmit}
+                disabled={isLoading}
               >
-                <Text style={styles.submitButtonText}>Criar Caso</Text>
+                {isLoading ? (
+                  <Text style={styles.submitButtonText}>Criando...</Text>
+                ) : (
+                  <Text style={styles.submitButtonText}>Criar Caso</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -583,5 +671,8 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
 }); 
