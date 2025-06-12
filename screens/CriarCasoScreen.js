@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,9 +10,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Location from 'expo-location';
+import MapView, { Marker } from 'react-native-maps';
+
+const { width, height } = Dimensions.get('window');
 
 export default function CriarCasoScreen({ navigation }) {
   const [formData, setFormData] = useState({
@@ -26,6 +32,15 @@ export default function CriarCasoScreen({ navigation }) {
 
   const [showDatePickerAbertura, setShowDatePickerAbertura] = useState(false);
   const [showDatePickerConclusao, setShowDatePickerConclusao] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: -23.55052,
+    longitude: -46.633308,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
 
   const statusOptions = ['Em andamento', 'Finalizado', 'Arquivado'];
 
@@ -36,13 +51,55 @@ export default function CriarCasoScreen({ navigation }) {
     }));
   };
 
-  const handleCapturarLocalizacao = () => {
-    // Simular captura de localização
-    Alert.alert(
-      'Capturar Localização',
-      'Funcionalidade de captura de localização será implementada em breve!',
-      [{ text: 'OK' }]
-    );
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
+  const getCurrentLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão negada', 'Permissão de localização é necessária para usar esta funcionalidade.');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+      
+      setUserLocation({ latitude, longitude });
+      setMapRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      });
+      setSelectedLocation({ latitude, longitude });
+    } catch (error) {
+      console.error('Erro ao obter localização:', error);
+      Alert.alert('Erro', 'Não foi possível obter sua localização atual.');
+    }
+  };
+
+  const handleMapPress = (event) => {
+    const { coordinate } = event.nativeEvent;
+    setSelectedLocation(coordinate);
+  };
+
+  const handleConfirmLocation = () => {
+    if (selectedLocation) {
+      const coordenadas = `Latitude: ${selectedLocation.latitude.toFixed(6)}, Longitude: ${selectedLocation.longitude.toFixed(6)}`;
+      updateFormData('localizacao', coordenadas);
+      setShowMapPicker(false);
+      Alert.alert('Sucesso', 'Localização selecionada com sucesso!');
+    }
+  };
+
+  const handleOpenMapPicker = () => {
+    if (userLocation) {
+      setShowMapPicker(true);
+    } else {
+      Alert.alert('Erro', 'Aguarde a localização ser carregada ou verifique as permissões.');
+    }
   };
 
   const handleSubmit = () => {
@@ -116,28 +173,6 @@ export default function CriarCasoScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
-    </View>
-  );
-
-  const LocalizacaoField = () => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>Localização</Text>
-      <View style={styles.localizacaoContainer}>
-        <TextInput
-          style={styles.localizacaoInput}
-          value={formData.localizacao}
-          onChangeText={(text) => updateFormData('localizacao', text)}
-          placeholder="Clique no botão para capturar localização"
-          placeholderTextColor="#999"
-          editable={false}
-        />
-        <TouchableOpacity
-          style={styles.capturarButton}
-          onPress={handleCapturarLocalizacao}
-        >
-          <Ionicons name="location" size={20} color="#fff" />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -238,7 +273,22 @@ export default function CriarCasoScreen({ navigation }) {
               </View>
             </View>
 
-            <LocalizacaoField />
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Localização</Text>
+              <TouchableOpacity
+                style={styles.mapButton}
+                onPress={handleOpenMapPicker}
+              >
+                <Ionicons name="map" size={20} color="#fff" />
+                <Text style={styles.mapButtonText}>Selecionar no Mapa</Text>
+              </TouchableOpacity>
+              {formData.localizacao ? (
+                <View style={styles.coordenadasContainer}>
+                  <Text style={styles.coordenadasLabel}>Localização selecionada:</Text>
+                  <Text style={styles.coordenadasText}>{formData.localizacao}</Text>
+                </View>
+              ) : null}
+            </View>
 
             <View style={styles.buttonContainer}>
               <TouchableOpacity
@@ -258,6 +308,41 @@ export default function CriarCasoScreen({ navigation }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={showMapPicker}
+        onRequestClose={() => setShowMapPicker(false)}
+      >
+        <SafeAreaView style={styles.mapModalContainer}>
+          <View style={styles.mapModalHeader}>
+            <TouchableOpacity onPress={() => setShowMapPicker(false)}>
+              <Text style={styles.mapModalButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+            <Text style={styles.mapModalTitle}>Selecionar Localização</Text>
+            <TouchableOpacity onPress={handleConfirmLocation}>
+              <Text style={styles.mapModalButtonText}>Confirmar</Text>
+            </TouchableOpacity>
+          </View>
+          <MapView
+            style={styles.map}
+            region={mapRegion}
+            onPress={handleMapPress}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+          >
+            {selectedLocation && (
+              <Marker
+                coordinate={selectedLocation}
+                pinColor="red"
+                draggable
+                onDragEnd={(e) => setSelectedLocation(e.nativeEvent.coordinate)}
+              />
+            )}
+          </MapView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -348,7 +433,7 @@ const styles = StyleSheet.create({
   statusTextActive: {
     color: '#fff',
   },
-  localizacaoContainer: {
+  enderecoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
@@ -357,17 +442,35 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     overflow: 'hidden',
   },
-  localizacaoInput: {
+  enderecoInput: {
     flex: 1,
     padding: 12,
     fontSize: 16,
     color: '#333',
   },
-  capturarButton: {
+  buscarButton: {
     backgroundColor: '#007AFF',
     padding: 12,
     height: '100%',
     justifyContent: 'center',
+  },
+  coordenadasContainer: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: '#e8f4fd',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#b3d9ff',
+  },
+  coordenadasLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  coordenadasText: {
+    fontSize: 14,
+    color: '#333',
   },
   row: {
     flexDirection: 'row',
@@ -425,5 +528,60 @@ const styles = StyleSheet.create({
   placeholderTextDate: {
     fontSize: 16,
     color: '#999',
+  },
+  buscarCoordenadasButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  buscarCoordenadasText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  mapButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  mapButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  mapModalContainer: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? 0 : 40,
+  },
+  mapModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  mapModalButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+  },
+  mapModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  map: {
+    flex: 1,
   },
 }); 
