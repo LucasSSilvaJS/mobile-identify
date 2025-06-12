@@ -76,21 +76,6 @@ export default function CriarCasoScreen({ navigation }) {
     );
   };
 
-  const InputField = ({ label, value, onChangeText, placeholder, multiline = false, numberOfLines = 1 }) => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>{label}</Text>
-      <TextInput
-        style={[styles.input, multiline && styles.textArea]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#999"
-        multiline={multiline}
-        numberOfLines={numberOfLines}
-      />
-    </View>
-  );
-
   const StatusSelector = () => (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>Status</Text>
@@ -142,7 +127,7 @@ export default function CriarCasoScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
         style={styles.keyboardContainer} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
       >
         <View style={styles.header}>
           <TouchableOpacity
@@ -155,42 +140,64 @@ export default function CriarCasoScreen({ navigation }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.formContainer}>
-            <InputField
-              label="Título do Caso"
-              value={formData.titulo}
-              onChangeText={(text) => updateFormData('titulo', text)}
-              placeholder="Ex: Roubo em Residência"
-            />
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Título do Caso</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.titulo}
+                onChangeText={(text) => updateFormData('titulo', text)}
+                placeholder="Ex: Roubo em Residência"
+                placeholderTextColor="#999"
+              />
+            </View>
 
             <StatusSelector />
 
-            <InputField
-              label="Descrição"
-              value={formData.descricao}
-              onChangeText={(text) => updateFormData('descricao', text)}
-              placeholder="Descreva os detalhes do caso..."
-              multiline={true}
-              numberOfLines={4}
-            />
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Descrição</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.descricao}
+                onChangeText={(text) => updateFormData('descricao', text)}
+                placeholder="Descreva os detalhes do caso..."
+                placeholderTextColor="#999"
+                multiline={true}
+                numberOfLines={4}
+              />
+            </View>
 
             <View style={styles.row}>
               <View style={styles.halfWidth}>
-                <InputField
-                  label="Data de Abertura"
-                  value={formData.dataAbertura}
-                  onChangeText={(text) => updateFormData('dataAbertura', text)}
-                  placeholder="DD/MM/AAAA"
-                />
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Data de Abertura</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.dataAbertura}
+                    onChangeText={(text) => updateFormData('dataAbertura', text)}
+                    placeholder="DD/MM/AAAA"
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                  />
+                </View>
               </View>
               <View style={styles.halfWidth}>
-                <InputField
-                  label="Data de Conclusão"
-                  value={formData.dataConclusao}
-                  onChangeText={(text) => updateFormData('dataConclusao', text)}
-                  placeholder="DD/MM/AAAA"
-                />
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Data de Conclusão</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.dataConclusao}
+                    onChangeText={(text) => updateFormData('dataConclusao', text)}
+                    placeholder="DD/MM/AAAA"
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                  />
+                </View>
               </View>
             </View>
 
@@ -249,12 +256,14 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  formContainer: {
     padding: 20,
   },
+  formContainer: {
+    flex: 1,
+    paddingBottom: 20,
+  },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 15,
   },
   inputLabel: {
     fontSize: 16,
@@ -263,46 +272,41 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
     borderWidth: 1,
     borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
     color: '#333',
+    backgroundColor: '#fff',
   },
   textArea: {
-    height: 100,
+    minHeight: 100,
     textAlignVertical: 'top',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  halfWidth: {
-    width: '48%',
   },
   statusContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  statusButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    justifyContent: 'space-around',
     backgroundColor: '#fff',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ddd',
+    overflow: 'hidden',
+  },
+  statusButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRightWidth: 1,
+    borderRightColor: '#eee',
   },
   statusButtonActive: {
     backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
   },
   statusText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: '#555',
+    fontWeight: '500',
   },
   statusTextActive: {
     color: '#fff',
@@ -311,55 +315,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    overflow: 'hidden',
   },
   localizacaoInput: {
     flex: 1,
+    padding: 12,
     fontSize: 16,
     color: '#333',
   },
   capturarButton: {
-    padding: 8,
-    borderRadius: 8,
     backgroundColor: '#007AFF',
-    marginLeft: 10,
+    padding: 12,
+    height: '100%',
+    justifyContent: 'center',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  halfWidth: {
+    width: '48%',
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 30,
-    marginBottom: 20,
+    marginTop: 20,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginRight: 10,
+    backgroundColor: '#ccc',
+    padding: 15,
+    borderRadius: 8,
     alignItems: 'center',
+    marginRight: 10,
   },
   cancelButtonText: {
+    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: 'bold',
   },
   submitButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
     backgroundColor: '#007AFF',
-    marginLeft: 10,
+    padding: 15,
+    borderRadius: 8,
     alignItems: 'center',
+    marginLeft: 10,
   },
   submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 
