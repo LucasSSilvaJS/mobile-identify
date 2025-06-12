@@ -236,16 +236,47 @@ export const dashboardService = {
   },
 };
 
+// Cache local para relatórios
+let relatoriosCache = {
+  data: null,
+  timestamp: null,
+  expiresIn: 5 * 60 * 1000 // 5 minutos
+};
+
 // Funções para relatórios
 export const relatoriosService = {
-  // Listar relatórios
-  getRelatorios: async () => {
+  // Listar relatórios com cache
+  getRelatorios: async (forceRefresh = false) => {
     try {
+      // Verificar cache
+      const now = Date.now();
+      if (!forceRefresh && 
+          relatoriosCache.data && 
+          relatoriosCache.timestamp && 
+          (now - relatoriosCache.timestamp) < relatoriosCache.expiresIn) {
+        console.log('Retornando relatórios do cache');
+        return relatoriosCache.data;
+      }
+
       const response = await api.get('/relatorios');
+      
+      // Atualizar cache
+      relatoriosCache.data = response.data;
+      relatoriosCache.timestamp = now;
+      
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao buscar relatórios' };
     }
+  },
+
+  // Limpar cache
+  clearCache: () => {
+    relatoriosCache = {
+      data: null,
+      timestamp: null,
+      expiresIn: 5 * 60 * 1000
+    };
   },
 
   // Obter relatório por ID
@@ -262,6 +293,10 @@ export const relatoriosService = {
   createRelatorio: async (relatorioData) => {
     try {
       const response = await api.post('/relatorios', relatorioData);
+      
+      // Limpar cache após criar novo relatório
+      relatoriosService.clearCache();
+      
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao criar relatório' };
@@ -272,6 +307,10 @@ export const relatoriosService = {
   updateRelatorio: async (id, relatorioData) => {
     try {
       const response = await api.put(`/relatorios/${id}`, relatorioData);
+      
+      // Limpar cache após atualizar relatório
+      relatoriosService.clearCache();
+      
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao atualizar relatório' };
@@ -279,12 +318,35 @@ export const relatoriosService = {
   },
 
   // Excluir relatório
-  deleteRelatorio: async (id) => {
+  deleteRelatorio: async (id, userId, casoId) => {
     try {
-      const response = await api.delete(`/relatorios/${id}`);
+      const response = await api.delete(`/relatorios/${id}`, {
+        data: { userId, casoId }
+      });
+      
+      // Limpar cache após excluir relatório
+      relatoriosService.clearCache();
+      
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao excluir relatório' };
+    }
+  },
+
+  // Gerar relatório com Gemini
+  generateRelatorioWithGemini: async (casoId, userId) => {
+    try {
+      const response = await api.post('/relatorios/generate', {
+        casoId,
+        userId
+      });
+      
+      // Limpar cache após gerar relatório
+      relatoriosService.clearCache();
+      
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao gerar relatório com IA' };
     }
   },
 };

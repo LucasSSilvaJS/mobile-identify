@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,21 +10,57 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { relatoriosService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function AdicionarRelatorioScreen({ navigation, route }) {
+export default function EditarRelatorioScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
     titulo: '',
     conteudo: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingRelatorio, setLoadingRelatorio] = useState(true);
+  const [error, setError] = useState(null);
   const { user } = useAuth();
 
-  // ID do caso recebido via route.params
-  const { casoId } = route.params || {};
+  // ID do relatório recebido via route.params
+  const { relatorioId, relatorio } = route.params || {};
+
+  useEffect(() => {
+    if (relatorio) {
+      // Se o relatório foi passado como parâmetro, use-o
+      setFormData({
+        titulo: relatorio.titulo || '',
+        conteudo: relatorio.conteudo || '',
+      });
+      setLoadingRelatorio(false);
+    } else if (relatorioId) {
+      // Se apenas o ID foi passado, carregue o relatório
+      carregarRelatorio();
+    } else {
+      setError('ID do relatório não fornecido');
+      setLoadingRelatorio(false);
+    }
+  }, [relatorioId, relatorio]);
+
+  const carregarRelatorio = async () => {
+    try {
+      setError(null);
+      const data = await relatoriosService.getRelatorioById(relatorioId);
+      setFormData({
+        titulo: data.titulo || '',
+        conteudo: data.conteudo || '',
+      });
+    } catch (err) {
+      console.error('Erro ao carregar relatório:', err);
+      setError(err.error || 'Erro ao carregar relatório');
+    } finally {
+      setLoadingRelatorio(false);
+    }
+  };
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({
@@ -39,28 +75,26 @@ export default function AdicionarRelatorioScreen({ navigation, route }) {
       return;
     }
 
-    if (!casoId) {
-      Alert.alert('Erro', 'ID do caso não fornecido');
+    if (!relatorioId) {
+      Alert.alert('Erro', 'ID do relatório não fornecido');
       return;
     }
 
     setIsLoading(true);
     try {
       const relatorioData = {
-        casoId: casoId,
-        userId: user?.id || user?._id,
         titulo: formData.titulo,
         conteudo: formData.conteudo,
         peritoResponsavel: user?.id || user?._id,
       };
 
-      console.log('AdicionarRelatorio - Dados do relatório a serem enviados:', relatorioData);
+      console.log('EditarRelatorio - Dados do relatório a serem enviados:', relatorioData);
 
-      const response = await relatoriosService.createRelatorio(relatorioData);
+      const response = await relatoriosService.updateRelatorio(relatorioId, relatorioData);
       
       Alert.alert(
         'Sucesso', 
-        'Relatório criado com sucesso!',
+        'Relatório atualizado com sucesso!',
         [
           {
             text: 'OK',
@@ -69,12 +103,41 @@ export default function AdicionarRelatorioScreen({ navigation, route }) {
         ]
       );
     } catch (error) {
-      console.error('Erro ao criar relatório:', error);
-      Alert.alert('Erro', error.error || 'Erro ao criar relatório');
+      console.error('Erro ao atualizar relatório:', error);
+      Alert.alert('Erro', error.error || 'Erro ao atualizar relatório');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (loadingRelatorio) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Carregando relatório...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
+          <Text style={styles.errorTitle}>Erro ao carregar relatório</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={carregarRelatorio}>
+            <Text style={styles.retryButtonText}>Tentar novamente</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>Voltar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -89,7 +152,7 @@ export default function AdicionarRelatorioScreen({ navigation, route }) {
           >
             <Ionicons name="arrow-back" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Criar Relatório</Text>
+          <Text style={styles.headerTitle}>Editar Relatório</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -139,9 +202,9 @@ export default function AdicionarRelatorioScreen({ navigation, route }) {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <Text style={styles.submitButtonText}>Criando...</Text>
+                  <Text style={styles.submitButtonText}>Atualizando...</Text>
                 ) : (
-                  <Text style={styles.submitButtonText}>Criar Relatório</Text>
+                  <Text style={styles.submitButtonText}>Atualizar Relatório</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -244,5 +307,59 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backButton: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

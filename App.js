@@ -10,8 +10,11 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import CasosScreen from './screens/CasosScreen';
+import RelatoriosScreen from './screens/RelatoriosScreen';
 import CriarCasoScreen from './screens/CriarCasoScreen';
 import DetalhesCasoScreen from './screens/DetalhesCasoScreen';
+import DetalhesRelatorioScreen from './screens/DetalhesRelatorioScreen';
+import EditarRelatorioScreen from './screens/EditarRelatorioScreen';
 import AdicionarEvidenciaScreen from './screens/AdicionarEvidenciaScreen';
 import AdicionarVitimaScreen from './screens/AdicionarVitimaScreen';
 import AdicionarRelatorioScreen from './screens/AdicionarRelatorioScreen';
@@ -45,6 +48,8 @@ function HomeStack() {
       <Stack.Screen name="CriarCaso" component={CriarCasoScreen} />
       <Stack.Screen name="EditarCaso" component={CriarCasoScreen} />
       <Stack.Screen name="DetalhesCaso" component={DetalhesCasoScreen} />
+      <Stack.Screen name="DetalhesRelatorio" component={DetalhesRelatorioScreen} />
+      <Stack.Screen name="EditarRelatorio" component={EditarRelatorioScreen} />
       <Stack.Screen name="AdicionarEvidencia" component={AdicionarEvidenciaScreen} />
       <Stack.Screen name="AdicionarVitima" component={AdicionarVitimaScreen} />
       <Stack.Screen name="AdicionarRelatorio" component={AdicionarRelatorioScreen} />
@@ -60,9 +65,22 @@ function CasosStack() {
       <Stack.Screen name="CriarCaso" component={CriarCasoScreen} />
       <Stack.Screen name="EditarCaso" component={CriarCasoScreen} />
       <Stack.Screen name="DetalhesCaso" component={DetalhesCasoScreen} />
+      <Stack.Screen name="DetalhesRelatorio" component={DetalhesRelatorioScreen} />
+      <Stack.Screen name="EditarRelatorio" component={EditarRelatorioScreen} />
       <Stack.Screen name="AdicionarEvidencia" component={AdicionarEvidenciaScreen} />
       <Stack.Screen name="AdicionarVitima" component={AdicionarVitimaScreen} />
       <Stack.Screen name="AdicionarRelatorio" component={AdicionarRelatorioScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Stack Navigator para a tela Relatórios
+function RelatoriosStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="RelatoriosMain" component={RelatoriosScreen} />
+      <Stack.Screen name="DetalhesRelatorio" component={DetalhesRelatorioScreen} />
+      <Stack.Screen name="EditarRelatorio" component={EditarRelatorioScreen} />
     </Stack.Navigator>
   );
 }
@@ -100,6 +118,8 @@ function AppContent() {
                 iconName = focused ? 'analytics' : 'analytics-outline';
               } else if (route.name === 'Casos') {
                 iconName = focused ? 'folder' : 'folder-outline';
+              } else if (route.name === 'Relatorios') {
+                iconName = focused ? 'bar-chart' : 'bar-chart-outline';
               }
 
               return <Ionicons name={iconName} size={size} color={color} />;
@@ -142,6 +162,11 @@ function AppContent() {
             name="Casos" 
             component={CasosStack}
             options={{ tabBarLabel: 'Casos' }}
+          />
+          <Tab.Screen 
+            name="Relatorios" 
+            component={RelatoriosStack}
+            options={{ tabBarLabel: 'Relatorios' }}
           />
         </Tab.Navigator>
       </NavigationContainer>

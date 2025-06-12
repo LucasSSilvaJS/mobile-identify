@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { casosService } from '../services/api';
+import { casosService, relatoriosService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function DetalhesCasoScreen({ navigation, route }) {
@@ -104,6 +104,105 @@ export default function DetalhesCasoScreen({ navigation, route }) {
     if (caso) {
       navigation.navigate('AdicionarRelatorio', { casoId: caso._id });
     }
+  };
+
+  const handleGerarRelatorioIA = async () => {
+    if (!caso) return;
+
+    Alert.alert(
+      'Gerar Relatório com IA',
+      'Deseja gerar um relatório automático usando inteligência artificial? Esta ação criará um relatório baseado nos dados do caso.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Gerar',
+          onPress: async () => {
+            try {
+              // Mostrar loading
+              Alert.alert(
+                'Gerando Relatório',
+                'Aguarde enquanto a IA analisa os dados do caso...',
+                [],
+                { cancelable: false }
+              );
+
+              const response = await relatoriosService.generateRelatorioWithGemini(
+                caso._id,
+                user?.id || user?._id
+              );
+
+              // Fechar o alerta de loading
+              Alert.alert(
+                'Sucesso',
+                'Relatório gerado com sucesso!',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      // Recarregar o caso para mostrar o novo relatório
+                      carregarCaso();
+                    }
+                  }
+                ]
+              );
+            } catch (error) {
+              console.error('Erro ao gerar relatório com IA:', error);
+              Alert.alert(
+                'Erro',
+                error.error || 'Erro ao gerar relatório com IA. Tente novamente.',
+                [{ text: 'OK' }]
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleExcluirRelatorio = () => {
+    if (!caso || !caso.relatorio) return;
+
+    Alert.alert(
+      'Excluir Relatório',
+      'Tem certeza que deseja excluir este relatório? Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await relatoriosService.deleteRelatorio(
+                caso.relatorio._id,
+                user?.id || user?._id,
+                caso._id
+              );
+
+              Alert.alert(
+                'Sucesso',
+                'Relatório excluído com sucesso!',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      // Recarregar o caso para atualizar a interface
+                      carregarCaso();
+                    }
+                  }
+                ]
+              );
+            } catch (error) {
+              console.error('Erro ao excluir relatório:', error);
+              Alert.alert(
+                'Erro',
+                error.error || 'Erro ao excluir relatório. Tente novamente.',
+                [{ text: 'OK' }]
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleCompartilhar = () => {
@@ -397,11 +496,43 @@ export default function DetalhesCasoScreen({ navigation, route }) {
           <View style={styles.sectionHeader}>
             <Ionicons name="document-text-outline" size={24} color="#3B82F6" />
             <Text style={styles.sectionTitle}>Relatório</Text>
-            {!caso.relatorio && (
-              <TouchableOpacity style={[styles.addButton, { backgroundColor: '#3B82F6' }]} onPress={handleAdicionarRelatorio}>
-                <Ionicons name="add" size={20} color="white" />
-                <Text style={styles.addButtonText}>Adicionar</Text>
-              </TouchableOpacity>
+            {!caso.relatorio ? (
+              <View style={styles.relatorioButtons}>
+                <TouchableOpacity 
+                  style={[styles.addButton, { backgroundColor: '#3B82F6', marginRight: 8 }]} 
+                  onPress={handleAdicionarRelatorio}
+                >
+                  <Ionicons name="add" size={20} color="white" />
+                  <Text style={styles.addButtonText}>Manual</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.addButton, { backgroundColor: '#10B981' }]} 
+                  onPress={handleGerarRelatorioIA}
+                >
+                  <Ionicons name="sparkles" size={20} color="white" />
+                  <Text style={styles.addButtonText}>IA</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.relatorioButtons}>
+                <TouchableOpacity 
+                  style={[styles.addButton, { backgroundColor: '#3B82F6', marginRight: 8 }]} 
+                  onPress={() => navigation.navigate('EditarRelatorio', { 
+                    relatorioId: caso.relatorio._id,
+                    relatorio: caso.relatorio 
+                  })}
+                >
+                  <Ionicons name="create-outline" size={20} color="white" />
+                  <Text style={styles.addButtonText}>Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.addButton, { backgroundColor: '#FF3B30' }]} 
+                  onPress={handleExcluirRelatorio}
+                >
+                  <Ionicons name="trash-outline" size={20} color="white" />
+                  <Text style={styles.addButtonText}>Excluir</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
           
@@ -419,6 +550,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
           ) : (
             <View style={styles.emptySection}>
               <Text style={styles.emptyText}>Nenhum relatório criado para este caso.</Text>
+              <Text style={styles.emptySubtext}>Crie um relatório manualmente ou use IA para gerar automaticamente.</Text>
             </View>
           )}
         </View>
@@ -738,5 +870,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'white',
     marginLeft: 4,
+  },
+  relatorioButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
   },
 }); 
