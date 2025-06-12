@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,10 +7,29 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  useWindowDimensions,
+  SafeAreaView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 export default function CasosScreen() {
+  const { width, height } = useWindowDimensions();
+  const [isLandscape, setIsLandscape] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const navigation = useNavigation();
+
+  // Detectar mudanças de orientação e tamanho de tela
+  useEffect(() => {
+    const checkOrientation = () => {
+      setIsLandscape(width > height);
+      setIsTablet(width >= 768); // Considera tablet a partir de 768px
+    };
+
+    checkOrientation();
+  }, [width, height]);
+
   const [searchText, setSearchText] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Todos');
 
@@ -20,50 +39,70 @@ export default function CasosScreen() {
       numero: 'CASE-001',
       titulo: 'Roubo em Residência',
       status: 'Em Andamento',
-      data: '15/11/2024',
-      vitimas: 2,
-      evidencias: 8,
-      prioridade: 'Alta',
+      descricao: 'Roubo ocorrido em residência localizada na Rua das Flores, 123. O suspeito invadiu a propriedade durante a madrugada e levou objetos de valor.',
+      dataAbertura: '15/11/2024',
+      dataConclusao: '',
+      localizacao: 'Rua das Flores, 123 - Centro',
+      latitude: -23.5505,
+      longitude: -46.6333,
+      evidencia: 'Fotos do local, impressões digitais, câmeras de segurança',
+      vitimas: 'João Silva, Maria Santos',
     },
     {
       id: '2',
       numero: 'CASE-002',
       titulo: 'Assalto a Banco',
       status: 'Finalizado',
-      data: '10/11/2024',
-      vitimas: 5,
-      evidencias: 15,
-      prioridade: 'Crítica',
+      descricao: 'Assalto ocorrido no Banco Central da cidade. Suspeitos armados invadiram o estabelecimento e levaram uma quantia significativa.',
+      dataAbertura: '10/11/2024',
+      dataConclusao: '20/11/2024',
+      localizacao: 'Av. Principal, 456 - Centro',
+      latitude: -23.5600,
+      longitude: -46.6400,
+      evidencia: 'Vídeos de segurança, armas apreendidas, testemunhos',
+      vitimas: 'Funcionários do banco e clientes',
     },
     {
       id: '3',
       numero: 'CASE-003',
       titulo: 'Fraude Eletrônica',
       status: 'Arquivado',
-      data: '05/11/2024',
-      vitimas: 1,
-      evidencias: 12,
-      prioridade: 'Média',
+      descricao: 'Fraude eletrônica envolvendo transferências bancárias não autorizadas através de phishing.',
+      dataAbertura: '05/11/2024',
+      dataConclusao: '15/11/2024',
+      localizacao: 'Online - Múltiplas localizações',
+      latitude: -23.5400,
+      longitude: -46.6200,
+      evidencia: 'Logs de transações, emails fraudulentos, registros bancários',
+      vitimas: 'Carlos Oliveira',
     },
     {
       id: '4',
       numero: 'CASE-004',
       titulo: 'Homicídio',
       status: 'Em Andamento',
-      data: '12/11/2024',
-      vitimas: 1,
-      evidencias: 25,
-      prioridade: 'Crítica',
+      descricao: 'Homicídio ocorrido em área residencial. Vítima encontrada sem vida em sua residência.',
+      dataAbertura: '12/11/2024',
+      dataConclusao: '',
+      localizacao: 'Rua das Palmeiras, 789 - Bairro Norte',
+      latitude: -23.5700,
+      longitude: -46.6500,
+      evidencia: 'Laudo pericial, testemunhos, objetos do local',
+      vitimas: 'Ana Costa',
     },
     {
       id: '5',
       numero: 'CASE-005',
       titulo: 'Tráfico de Drogas',
       status: 'Em Andamento',
-      data: '08/11/2024',
-      vitimas: 3,
-      evidencias: 18,
-      prioridade: 'Alta',
+      descricao: 'Operação de combate ao tráfico de drogas em área urbana. Apreensão de substâncias ilícitas.',
+      dataAbertura: '08/11/2024',
+      dataConclusao: '',
+      localizacao: 'Rua do Comércio, 321 - Zona Sul',
+      latitude: -23.5800,
+      longitude: -46.6600,
+      evidencia: 'Substâncias apreendidas, equipamentos, documentos',
+      vitimas: 'Suspeitos em investigação',
     },
   ]);
 
@@ -74,24 +113,9 @@ export default function CasosScreen() {
       case 'Em Andamento':
         return '#FF6B6B';
       case 'Finalizado':
-        return '#4ECDC4';
+        return '#51CF66';
       case 'Arquivado':
-        return '#45B7D1';
-      default:
-        return '#999';
-    }
-  };
-
-  const getPrioridadeColor = (prioridade) => {
-    switch (prioridade) {
-      case 'Crítica':
-        return '#FF3B30';
-      case 'Alta':
-        return '#FF9500';
-      case 'Média':
-        return '#FFCC00';
-      case 'Baixa':
-        return '#34C759';
+        return '#845EF7';
       default:
         return '#999';
     }
@@ -105,57 +129,52 @@ export default function CasosScreen() {
   });
 
   const handleCasePress = (caso) => {
-    Alert.alert(
-      caso.titulo,
-      `Detalhes do caso ${caso.numero} serão exibidos em breve!`,
-      [{ text: 'OK' }]
-    );
+    navigation.navigate('DetalhesCaso', { caso });
   };
 
   const handleCreateCase = () => {
-    Alert.alert(
-      'Criar Novo Caso',
-      'Funcionalidade de criação de casos será implementada em breve!',
-      [{ text: 'OK' }]
-    );
+    navigation.navigate('CriarCaso');
   };
 
   const renderCaso = ({ item }) => (
     <TouchableOpacity
-      style={styles.casoCard}
+      style={[
+        styles.casoCard,
+        isTablet && styles.casoCardTablet
+      ]}
       onPress={() => handleCasePress(item)}
     >
       <View style={styles.casoHeader}>
         <View style={styles.casoInfo}>
-          <Text style={styles.casoNumero}>{item.numero}</Text>
-          <Text style={styles.casoTitulo}>{item.titulo}</Text>
+          <Text style={[
+            styles.casoNumero,
+            isTablet && styles.casoNumeroTablet
+          ]}>{item.numero}</Text>
+          <Text style={[
+            styles.casoTitulo,
+            isTablet && styles.casoTituloTablet
+          ]}>{item.titulo}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{item.status}</Text>
+          <Text style={[
+            styles.statusText,
+            isTablet && styles.statusTextTablet
+          ]}>{item.status}</Text>
         </View>
       </View>
 
-      <View style={styles.casoDetails}>
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>{item.data}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="people-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>{item.vitimas} vítima(s)</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="document-text-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>{item.evidencias} evidências</Text>
-        </View>
+      <View style={styles.casoDescription}>
+        <Text style={[
+          styles.descriptionText,
+          isTablet && styles.descriptionTextTablet
+        ]} numberOfLines={3}>
+          {item.descricao}
+        </Text>
       </View>
 
       <View style={styles.casoFooter}>
-        <View style={[styles.prioridadeBadge, { backgroundColor: getPrioridadeColor(item.prioridade) }]}>
-          <Text style={styles.prioridadeText}>{item.prioridade}</Text>
-        </View>
         <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+          <Ionicons name="chevron-forward" size={isTablet ? 24 : 20} color="#007AFF" />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -165,13 +184,15 @@ export default function CasosScreen() {
     <TouchableOpacity
       style={[
         styles.filtroButton,
-        selectedFilter === item && styles.filtroButtonActive
+        selectedFilter === item && styles.filtroButtonActive,
+        isTablet && styles.filtroButtonTablet
       ]}
       onPress={() => setSelectedFilter(item)}
     >
       <Text style={[
         styles.filtroText,
-        selectedFilter === item && styles.filtroTextActive
+        selectedFilter === item && styles.filtroTextActive,
+        isTablet && styles.filtroTextTablet
       ]}>
         {item}
       </Text>
@@ -179,18 +200,33 @@ export default function CasosScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Casos</Text>
-        <Text style={styles.headerSubtitle}>{casosFiltrados.length} casos encontrados</Text>
+      <View style={[
+        styles.header,
+        isTablet && styles.headerTablet
+      ]}>
+        <Text style={[
+          styles.headerTitle,
+          isTablet && styles.headerTitleTablet
+        ]}>Casos</Text>
+        <Text style={[
+          styles.headerSubtitle,
+          isTablet && styles.headerSubtitleTablet
+        ]}>{casosFiltrados.length} casos encontrados</Text>
       </View>
 
       {/* Barra de Busca */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+      <View style={[
+        styles.searchContainer,
+        isTablet && styles.searchContainerTablet
+      ]}>
+        <Ionicons name="search" size={isTablet ? 24 : 20} color="#666" style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[
+            styles.searchInput,
+            isTablet && styles.searchInputTablet
+          ]}
           placeholder="Buscar casos..."
           value={searchText}
           onChangeText={setSearchText}
@@ -198,7 +234,7 @@ export default function CasosScreen() {
         />
         {searchText.length > 0 && (
           <TouchableOpacity onPress={() => setSearchText('')}>
-            <Ionicons name="close-circle" size={20} color="#666" />
+            <Ionicons name="close-circle" size={isTablet ? 24 : 20} color="#666" />
           </TouchableOpacity>
         )}
       </View>
@@ -211,7 +247,10 @@ export default function CasosScreen() {
           keyExtractor={(item) => item}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtrosList}
+          contentContainerStyle={[
+            styles.filtrosList,
+            isTablet && styles.filtrosListTablet
+          ]}
         />
       </View>
 
@@ -220,18 +259,25 @@ export default function CasosScreen() {
         data={casosFiltrados}
         renderItem={renderCaso}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.casosList}
+        contentContainerStyle={[
+          styles.casosList,
+          isTablet && styles.casosListTablet
+        ]}
         showsVerticalScrollIndicator={false}
+        numColumns={isTablet && isLandscape ? 2 : 1}
       />
 
       {/* Botão Flutuante */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[
+          styles.fab,
+          isTablet && styles.fabTablet
+        ]}
         onPress={handleCreateCase}
       >
-        <Ionicons name="add" size={30} color="#fff" />
+        <Ionicons name="add" size={isTablet ? 36 : 30} color="#fff" />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -242,18 +288,28 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 40,
+    paddingTop: Platform.OS === 'ios' ? 20 : 30,
     backgroundColor: '#fff',
+  },
+  headerTablet: {
+    paddingHorizontal: 40,
+    paddingTop: Platform.OS === 'ios' ? 30 : 50,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
   },
+  headerTitleTablet: {
+    fontSize: 36,
+  },
   headerSubtitle: {
     fontSize: 16,
     color: '#666',
     marginTop: 4,
+  },
+  headerSubtitleTablet: {
+    fontSize: 20,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -273,6 +329,11 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
+  searchContainerTablet: {
+    marginHorizontal: 40,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
   searchIcon: {
     marginRight: 10,
   },
@@ -281,11 +342,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  searchInputTablet: {
+    fontSize: 18,
+  },
   filtrosContainer: {
     marginBottom: 10,
   },
   filtrosList: {
     paddingHorizontal: 20,
+  },
+  filtrosListTablet: {
+    paddingHorizontal: 40,
   },
   filtroButton: {
     paddingHorizontal: 20,
@@ -296,6 +363,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
+  filtroButtonTablet: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    marginRight: 15,
+  },
   filtroButtonActive: {
     backgroundColor: '#007AFF',
     borderColor: '#007AFF',
@@ -304,12 +376,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  filtroTextTablet: {
+    fontSize: 16,
+  },
   filtroTextActive: {
     color: '#fff',
   },
   casosList: {
     padding: 20,
     paddingTop: 0,
+    paddingBottom: Platform.OS === 'ios' ? 140 : 120,
+  },
+  casosListTablet: {
+    paddingHorizontal: 40,
+    paddingBottom: Platform.OS === 'ios' ? 160 : 140,
   },
   casoCard: {
     backgroundColor: '#fff',
@@ -324,6 +404,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  casoCardTablet: {
+    padding: 30,
+    marginBottom: 20,
+    marginHorizontal: 10,
+    flex: 1,
   },
   casoHeader: {
     flexDirection: 'row',
@@ -340,10 +426,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 4,
   },
+  casoNumeroTablet: {
+    fontSize: 16,
+  },
   casoTitulo: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+  },
+  casoTituloTablet: {
+    fontSize: 22,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -355,40 +447,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  casoDetails: {
+  statusTextTablet: {
+    fontSize: 14,
+  },
+  casoDescription: {
     marginBottom: 15,
   },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  detailText: {
+  descriptionText: {
     fontSize: 14,
     color: '#666',
-    marginLeft: 8,
+    lineHeight: 20,
+  },
+  descriptionTextTablet: {
+    fontSize: 16,
+    lineHeight: 24,
   },
   casoFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  prioridadeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  prioridadeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
   actionButton: {
     padding: 5,
   },
   fab: {
     position: 'absolute',
-    bottom: 20,
+    bottom: Platform.OS === 'ios' ? 120 : 100,
     right: 20,
     width: 56,
     height: 56,
@@ -404,5 +488,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
+  },
+  fabTablet: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    bottom: Platform.OS === 'ios' ? 140 : 120,
+    right: 30,
   },
 }); 

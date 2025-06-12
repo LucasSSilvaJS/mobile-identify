@@ -1,11 +1,15 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView, Platform, StatusBar } from 'react-native';
 
 // Importar telas
 import HomeScreen from './screens/HomeScreen';
 import CasosScreen from './screens/CasosScreen';
+import CriarCasoScreen from './screens/CriarCasoScreen';
+import DetalhesCasoScreen from './screens/DetalhesCasoScreen';
 
 // Componente da Logo
 import Svg, { Path } from 'react-native-svg';
@@ -26,51 +30,89 @@ const Logo = ({ width = 173, height = 47, color = "#123458" }) => (
 );
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+// Stack Navigator para a tela Home
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="CriarCaso" component={CriarCasoScreen} />
+      <Stack.Screen name="DetalhesCaso" component={DetalhesCasoScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Stack Navigator para a tela Casos
+function CasosStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="CasosMain" component={CasosScreen} />
+      <Stack.Screen name="CriarCaso" component={CriarCasoScreen} />
+      <Stack.Screen name="DetalhesCaso" component={DetalhesCasoScreen} />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName;
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={({ route }) => ({
+            tabBarIcon: ({ focused, color, size }) => {
+              let iconName;
 
-            if (route.name === 'Dashboard') {
-              iconName = focused ? 'analytics' : 'analytics-outline';
-            } else if (route.name === 'Casos') {
-              iconName = focused ? 'folder' : 'folder-outline';
-            }
+              if (route.name === 'Dashboard') {
+                iconName = focused ? 'analytics' : 'analytics-outline';
+              } else if (route.name === 'Casos') {
+                iconName = focused ? 'folder' : 'folder-outline';
+}
 
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#007AFF',
-          tabBarInactiveTintColor: 'gray',
-          headerShown: false,
-          tabBarStyle: {
-            backgroundColor: '#fff',
-            borderTopWidth: 1,
-            borderTopColor: '#eee',
-            paddingBottom: 5,
-            paddingTop: 5,
-            height: 60,
-          },
-          tabBarLabelStyle: {
-            fontSize: 12,
-            fontWeight: '600',
-          },
-        })}
-      >
-        <Tab.Screen 
-          name="Dashboard" 
-          component={HomeScreen}
-          options={{ tabBarLabel: 'Dashboard' }}
-        />
-        <Tab.Screen 
-          name="Casos" 
-          component={CasosScreen}
-          options={{ tabBarLabel: 'Casos' }}
-        />
-      </Tab.Navigator>
-    </NavigationContainer>
+              return <Ionicons name={iconName} size={size} color={color} />;
+            },
+            tabBarActiveTintColor: '#007AFF',
+            tabBarInactiveTintColor: 'gray',
+            headerShown: false,
+            tabBarStyle: {
+    backgroundColor: '#fff',
+              borderTopWidth: 1,
+              borderTopColor: '#eee',
+              paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+              paddingTop: 10,
+              height: Platform.OS === 'ios' ? 90 : 70,
+              elevation: 8,
+              shadowColor: '#000',
+              shadowOffset: {
+                width: 0,
+                height: -2,
+              },
+              shadowOpacity: 0.1,
+              shadowRadius: 3.84,
+            },
+            tabBarLabelStyle: {
+              fontSize: 12,
+              fontWeight: '600',
+              marginBottom: Platform.OS === 'ios' ? 0 : 5,
+            },
+            tabBarIconStyle: {
+              marginTop: 5,
+  },
+          })}
+        >
+          <Tab.Screen 
+            name="Dashboard" 
+            component={HomeStack}
+            options={{ tabBarLabel: 'Dashboard' }}
+          />
+          <Tab.Screen 
+            name="Casos" 
+            component={CasosStack}
+            options={{ tabBarLabel: 'Casos' }}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </SafeAreaView>
   );
 }

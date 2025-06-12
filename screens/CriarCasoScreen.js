@@ -9,28 +9,36 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CriarCasoScreen({ navigation }) {
   const [formData, setFormData] = useState({
     titulo: '',
+    status: 'Em andamento',
     descricao: '',
-    local: '',
-    data: '',
-    hora: '',
-    vitimas: '',
-    prioridade: 'Média',
-    observacoes: '',
+    dataAbertura: '',
+    dataConclusao: '',
+    localizacao: '',
   });
 
-  const prioridades = ['Baixa', 'Média', 'Alta', 'Crítica'];
+  const statusOptions = ['Em andamento', 'Finalizado', 'Arquivado'];
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleCapturarLocalizacao = () => {
+    // Simular captura de localização
+    Alert.alert(
+      'Capturar Localização',
+      'Funcionalidade de captura de localização será implementada em breve!',
+      [{ text: 'OK' }]
+    );
   };
 
   const handleSubmit = () => {
@@ -45,8 +53,13 @@ export default function CriarCasoScreen({ navigation }) {
       return;
     }
 
-    if (!formData.local.trim()) {
-      Alert.alert('Erro', 'Por favor, insira o local do caso');
+    if (!formData.dataAbertura.trim()) {
+      Alert.alert('Erro', 'Por favor, insira a data de abertura');
+      return;
+    }
+
+    if (!formData.localizacao.trim()) {
+      Alert.alert('Erro', 'Por favor, capture a localização do caso');
       return;
     }
 
@@ -78,24 +91,24 @@ export default function CriarCasoScreen({ navigation }) {
     </View>
   );
 
-  const PrioridadeSelector = () => (
+  const StatusSelector = () => (
     <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>Prioridade</Text>
-      <View style={styles.prioridadeContainer}>
-        {prioridades.map((prioridade) => (
+      <Text style={styles.inputLabel}>Status</Text>
+      <View style={styles.statusContainer}>
+        {statusOptions.map((status) => (
           <TouchableOpacity
-            key={prioridade}
+            key={status}
             style={[
-              styles.prioridadeButton,
-              formData.prioridade === prioridade && styles.prioridadeButtonActive
+              styles.statusButton,
+              formData.status === status && styles.statusButtonActive
             ]}
-            onPress={() => updateFormData('prioridade', prioridade)}
+            onPress={() => updateFormData('status', status)}
           >
             <Text style={[
-              styles.prioridadeText,
-              formData.prioridade === prioridade && styles.prioridadeTextActive
+              styles.statusText,
+              formData.status === status && styles.statusTextActive
             ]}>
-              {prioridade}
+              {status}
             </Text>
           </TouchableOpacity>
         ))}
@@ -103,102 +116,105 @@ export default function CriarCasoScreen({ navigation }) {
     </View>
   );
 
-  return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.header}>
+  const LocalizacaoField = () => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>Localização</Text>
+      <View style={styles.localizacaoContainer}>
+        <TextInput
+          style={styles.localizacaoInput}
+          value={formData.localizacao}
+          onChangeText={(text) => updateFormData('localizacao', text)}
+          placeholder="Clique no botão para capturar localização"
+          placeholderTextColor="#999"
+          editable={false}
+        />
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          style={styles.capturarButton}
+          onPress={handleCapturarLocalizacao}
         >
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Ionicons name="location" size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Novo Caso</Text>
-        <View style={styles.placeholder} />
       </View>
+    </View>
+  );
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.formContainer}>
-          <InputField
-            label="Título do Caso"
-            value={formData.titulo}
-            onChangeText={(text) => updateFormData('titulo', text)}
-            placeholder="Ex: Roubo em Residência"
-          />
-
-          <InputField
-            label="Descrição"
-            value={formData.descricao}
-            onChangeText={(text) => updateFormData('descricao', text)}
-            placeholder="Descreva os detalhes do caso..."
-            multiline={true}
-            numberOfLines={4}
-          />
-
-          <InputField
-            label="Local"
-            value={formData.local}
-            onChangeText={(text) => updateFormData('local', text)}
-            placeholder="Endereço ou local do incidente"
-          />
-
-          <View style={styles.row}>
-            <View style={styles.halfWidth}>
-              <InputField
-                label="Data"
-                value={formData.data}
-                onChangeText={(text) => updateFormData('data', text)}
-                placeholder="DD/MM/AAAA"
-              />
-            </View>
-            <View style={styles.halfWidth}>
-              <InputField
-                label="Hora"
-                value={formData.hora}
-                onChangeText={(text) => updateFormData('hora', text)}
-                placeholder="HH:MM"
-              />
-            </View>
-          </View>
-
-          <InputField
-            label="Número de Vítimas"
-            value={formData.vitimas}
-            onChangeText={(text) => updateFormData('vitimas', text)}
-            placeholder="0"
-          />
-
-          <PrioridadeSelector />
-
-          <InputField
-            label="Observações Adicionais"
-            value={formData.observacoes}
-            onChangeText={(text) => updateFormData('observacoes', text)}
-            placeholder="Informações adicionais relevantes..."
-            multiline={true}
-            numberOfLines={3}
-          />
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleSubmit}
-            >
-              <Text style={styles.submitButtonText}>Criar Caso</Text>
-            </TouchableOpacity>
-          </View>
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardContainer} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Criar Novo Caso</Text>
+          <View style={styles.placeholder} />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.formContainer}>
+            <InputField
+              label="Título do Caso"
+              value={formData.titulo}
+              onChangeText={(text) => updateFormData('titulo', text)}
+              placeholder="Ex: Roubo em Residência"
+            />
+
+            <StatusSelector />
+
+            <InputField
+              label="Descrição"
+              value={formData.descricao}
+              onChangeText={(text) => updateFormData('descricao', text)}
+              placeholder="Descreva os detalhes do caso..."
+              multiline={true}
+              numberOfLines={4}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.halfWidth}>
+                <InputField
+                  label="Data de Abertura"
+                  value={formData.dataAbertura}
+                  onChangeText={(text) => updateFormData('dataAbertura', text)}
+                  placeholder="DD/MM/AAAA"
+                />
+              </View>
+              <View style={styles.halfWidth}>
+                <InputField
+                  label="Data de Conclusão"
+                  value={formData.dataConclusao}
+                  onChangeText={(text) => updateFormData('dataConclusao', text)}
+                  placeholder="DD/MM/AAAA"
+                />
+              </View>
+            </View>
+
+            <LocalizacaoField />
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleSubmit}
+              >
+                <Text style={styles.submitButtonText}>Criar Caso</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -207,12 +223,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  keyboardContainer: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 40,
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -264,12 +283,12 @@ const styles = StyleSheet.create({
   halfWidth: {
     width: '48%',
   },
-  prioridadeContainer: {
+  statusContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
   },
-  prioridadeButton: {
+  statusButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -277,16 +296,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  prioridadeButtonActive: {
+  statusButtonActive: {
     backgroundColor: '#007AFF',
     borderColor: '#007AFF',
   },
-  prioridadeText: {
+  statusText: {
     fontSize: 14,
     color: '#666',
   },
-  prioridadeTextActive: {
+  statusTextActive: {
     color: '#fff',
+  },
+  localizacaoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  localizacaoInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  capturarButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#007AFF',
+    marginLeft: 10,
   },
   buttonContainer: {
     flexDirection: 'row',
