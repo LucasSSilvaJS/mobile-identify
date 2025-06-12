@@ -198,18 +198,35 @@ export default function DetalhesCasoScreen({ navigation, route }) {
               <Ionicons name="document-text-outline" size={20} color="#007AFF" />
               <Text style={styles.evidenceText}>{caso.evidencia}</Text>
             </View>
+            <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AdicionarEvidencia')}>
+              <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
+              <Text style={styles.addButtonText}>Adicionar Evidência</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Ações */}
-          <View style={styles.actionsSection}>
-            <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="create-outline" size={20} color="#007AFF" />
-              <Text style={styles.actionButtonText}>Editar Caso</Text>
+          {/* Vítimas */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Vítimas</Text>
+            <View style={styles.evidenceCard}>
+              <Ionicons name="person-outline" size={20} color="#845EF7" />
+              <Text style={styles.evidenceText}>{caso.vitimas}</Text>
+            </View>
+            <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AdicionarVitima')}>
+              <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
+              <Text style={styles.addButtonText}>Adicionar Vítima</Text>
             </TouchableOpacity>
+          </View>
 
-            <TouchableOpacity style={[styles.actionButton, styles.deleteButton]}>
-              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-              <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Excluir Caso</Text>
+          {/* Relatório */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Relatório</Text>
+            <View style={styles.evidenceCard}>
+              <Ionicons name="receipt-outline" size={20} color="#51CF66" />
+              <Text style={styles.evidenceText}>Nenhum relatório adicionado.</Text>
+            </View>
+            <TouchableOpacity style={styles.addButton} onPress={() => alert('Adicionar Relatório')}>
+              <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
+              <Text style={styles.addButtonText}>Adicionar Relatório</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -436,5 +453,28 @@ const styles = StyleSheet.create({
   mapPlaceholderSubtext: {
     fontSize: 14,
     color: '#666',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  addButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginLeft: 8,
   },
 }); 

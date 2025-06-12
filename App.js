@@ -10,6 +10,8 @@ import HomeScreen from './screens/HomeScreen';
 import CasosScreen from './screens/CasosScreen';
 import CriarCasoScreen from './screens/CriarCasoScreen';
 import DetalhesCasoScreen from './screens/DetalhesCasoScreen';
+import AdicionarEvidenciaScreen from './screens/AdicionarEvidenciaScreen';
+import AdicionarVitimaScreen from './screens/AdicionarVitimaScreen';
 
 // Componente da Logo
 import Svg, { Path } from 'react-native-svg';
@@ -39,6 +41,8 @@ function HomeStack() {
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="CriarCaso" component={CriarCasoScreen} />
       <Stack.Screen name="DetalhesCaso" component={DetalhesCasoScreen} />
+      <Stack.Screen name="AdicionarEvidencia" component={AdicionarEvidenciaScreen} />
+      <Stack.Screen name="AdicionarVitima" component={AdicionarVitimaScreen} />
     </Stack.Navigator>
   );
 }
@@ -50,6 +54,8 @@ function CasosStack() {
       <Stack.Screen name="CasosMain" component={CasosScreen} />
       <Stack.Screen name="CriarCaso" component={CriarCasoScreen} />
       <Stack.Screen name="DetalhesCaso" component={DetalhesCasoScreen} />
+      <Stack.Screen name="AdicionarEvidencia" component={AdicionarEvidenciaScreen} />
+      <Stack.Screen name="AdicionarVitima" component={AdicionarVitimaScreen} />
     </Stack.Navigator>
   );
 }
