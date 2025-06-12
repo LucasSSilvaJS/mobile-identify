@@ -17,17 +17,18 @@ import * as Location from 'expo-location';
 import { useEvidencias } from '../hooks/useEvidencias';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function AdicionarEvidenciaScreen({ navigation, route }) {
-  const { casoId } = route.params || {};
+export default function EditarEvidenciaScreen({ navigation, route }) {
+  const { evidenciaId, evidencia } = route.params || {};
   const { user } = useAuth();
-  const { criarEvidencia, loading } = useEvidencias();
+  const { getEvidenciaById, atualizarEvidencia, loading } = useEvidencias();
   
   const [tipo, setTipo] = useState('');
-  const [status, setStatus] = useState('Em análise');
+  const [status, setStatus] = useState('');
   const [dataColeta, setDataColeta] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const tiposEvidencia = [
     'Foto',
@@ -46,6 +47,46 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
   ];
 
   const statusOptions = ['Em análise', 'Concluído'];
+
+  // Carregar dados da evidência
+  useEffect(() => {
+    if (evidencia) {
+      carregarDadosEvidencia(evidencia);
+    } else if (evidenciaId) {
+      carregarEvidenciaPorId();
+    }
+  }, [evidencia, evidenciaId]);
+
+  const carregarEvidenciaPorId = async () => {
+    try {
+      setInitialLoading(true);
+      const dadosEvidencia = await getEvidenciaById(evidenciaId);
+      carregarDadosEvidencia(dadosEvidencia);
+    } catch (error) {
+      console.error('Erro ao carregar evidência:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os dados da evidência.');
+      navigation.goBack();
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  const carregarDadosEvidencia = (dados) => {
+    setTipo(dados.tipo || '');
+    setStatus(dados.status || 'Em análise');
+    
+    // Converter data ISO para formato DD/MM/AAAA
+    if (dados.dataColeta) {
+      const data = new Date(dados.dataColeta);
+      const dia = String(data.getDate()).padStart(2, '0');
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const ano = data.getFullYear();
+      setDataColeta(`${dia}/${mes}/${ano}`);
+    }
+    
+    setLatitude(dados.geolocalizacao?.latitude || '');
+    setLongitude(dados.geolocalizacao?.longitude || '');
+  };
 
   // Obter localização atual
   const obterLocalizacao = async () => {
@@ -128,15 +169,14 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
         status,
         coletadaPor: user?.id || user?._id,
         latitude,
-        longitude,
-        casoId
+        longitude
       };
 
-      await criarEvidencia(evidenciaData);
+      await atualizarEvidencia(evidenciaId, evidenciaData);
 
       Alert.alert(
         'Sucesso',
-        'Evidência adicionada com sucesso!',
+        'Evidência atualizada com sucesso!',
         [
           {
             text: 'OK',
@@ -151,13 +191,24 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
         ]
       );
     } catch (error) {
-      console.error('Erro ao salvar evidência:', error);
+      console.error('Erro ao atualizar evidência:', error);
       Alert.alert(
         'Erro',
-        error.error || 'Erro ao salvar evidência. Tente novamente.'
+        error.error || 'Erro ao atualizar evidência. Tente novamente.'
       );
     }
   };
+
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Carregando evidência...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -168,7 +219,7 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
         >
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Adicionar Evidência</Text>
+        <Text style={styles.headerTitle}>Editar Evidência</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -274,7 +325,7 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
               <Ionicons name="save-outline" size={24} color="#fff" />
             )}
             <Text style={styles.saveButtonText}>
-              {loading ? 'Salvando...' : 'Salvar Evidência'}
+              {loading ? 'Salvando...' : 'Atualizar Evidência'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -314,6 +365,16 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   inputContainer: {
     marginBottom: 25,

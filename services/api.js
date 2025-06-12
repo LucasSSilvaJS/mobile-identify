@@ -275,6 +275,16 @@ export const evidenciasService = {
     }
   },
 
+  // Buscar evidência por ID
+  getEvidenciaById: async (id) => {
+    try {
+      const response = await api.get(`/evidencias/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar evidência' };
+    }
+  },
+
   // Criar evidência
   createEvidencia: async (evidenciaData) => {
     try {
@@ -282,6 +292,94 @@ export const evidenciasService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao criar evidência' };
+    }
+  },
+
+  // Atualizar evidência
+  updateEvidencia: async (id, evidenciaData) => {
+    try {
+      const response = await api.put(`/evidencias/${id}`, evidenciaData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao atualizar evidência' };
+    }
+  },
+
+  // Excluir evidência
+  deleteEvidencia: async (id, userId, casoId) => {
+    try {
+      const response = await api.delete(`/evidencias/${id}`, {
+        data: { userId, casoId }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao excluir evidência' };
+    }
+  },
+
+  // Adicionar imagem à evidência
+  addImagemToEvidencia: async (id, idImagem) => {
+    try {
+      const response = await api.post(`/evidencias/${id}/evidencias-imagens`, {
+        idImagem
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao adicionar imagem à evidência' };
+    }
+  },
+
+  // Remover imagem da evidência
+  removeImagemFromEvidencia: async (id, idImagem) => {
+    try {
+      const response = await api.delete(`/evidencias/${id}/evidencias-imagens?idImagem=${idImagem}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao remover imagem da evidência' };
+    }
+  },
+
+  // Adicionar texto à evidência
+  addTextoToEvidencia: async (id, idTexto) => {
+    try {
+      const response = await api.post(`/evidencias/${id}/evidencias-textos`, {
+        idTexto
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao adicionar texto à evidência' };
+    }
+  },
+
+  // Remover texto da evidência
+  removeTextoFromEvidencia: async (id, idTexto) => {
+    try {
+      const response = await api.delete(`/evidencias/${id}/evidencias-textos?idTexto=${idTexto}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao remover texto da evidência' };
+    }
+  },
+
+  // Adicionar laudo à evidência
+  addLaudoToEvidencia: async (id, idLaudo) => {
+    try {
+      const response = await api.post(`/evidencias/${id}/laudos`, {
+        idLaudo
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao adicionar laudo à evidência' };
+    }
+  },
+
+  // Remover laudo da evidência
+  removeLaudoFromEvidencia: async (id) => {
+    try {
+      const response = await api.delete(`/evidencias/${id}/laudos`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao remover laudo da evidência' };
     }
   },
 };

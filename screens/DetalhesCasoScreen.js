@@ -17,6 +17,7 @@ import { casosService, relatoriosService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useRelatorios } from '../hooks/useRelatorios';
 import { useVitimas } from '../hooks/useVitimas';
+import { useEvidencias } from '../hooks/useEvidencias';
 
 export default function DetalhesCasoScreen({ navigation, route }) {
   const [caso, setCaso] = useState(null);
@@ -25,6 +26,7 @@ export default function DetalhesCasoScreen({ navigation, route }) {
   const { user } = useAuth();
   const { gerarRelatorioIA, excluirRelatorio } = useRelatorios();
   const { excluirVitima } = useVitimas();
+  const { excluirEvidencia } = useEvidencias();
   const { casoId } = route.params || {};
 
   useEffect(() => {
@@ -92,7 +94,66 @@ export default function DetalhesCasoScreen({ navigation, route }) {
 
   const handleAdicionarEvidencia = () => {
     if (caso) {
-      navigation.navigate('AdicionarEvidencia', { casoId: caso._id });
+      navigation.navigate('AdicionarEvidencia', { 
+        casoId: caso._id,
+        onReturn: () => {
+          // Recarregar o caso para mostrar a nova evidência
+          carregarCaso();
+        }
+      });
+    }
+  };
+
+  const handleEditarEvidencia = (evidencia) => {
+    navigation.navigate('EditarEvidencia', { 
+      evidenciaId: evidencia._id,
+      evidencia: evidencia,
+      onReturn: () => {
+        // Recarregar o caso para mostrar as alterações
+        carregarCaso();
+      }
+    });
+  };
+
+  const handleExcluirEvidencia = (evidencia) => {
+    Alert.alert(
+      'Excluir Evidência',
+      'Tem certeza que deseja excluir esta evidência? Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => confirmarExclusaoEvidencia(evidencia),
+        },
+      ]
+    );
+  };
+
+  const confirmarExclusaoEvidencia = async (evidencia) => {
+    try {
+      await excluirEvidencia(evidencia._id, user?.id || user?._id, caso._id);
+
+      Alert.alert(
+        'Sucesso',
+        'Evidência excluída com sucesso! A lista será atualizada automaticamente.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Recarregar o caso para atualizar a interface
+              carregarCaso();
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Erro ao excluir evidência:', error);
+      Alert.alert(
+        'Erro',
+        error.error || 'Erro ao excluir evidência. Tente novamente.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -462,11 +523,38 @@ export default function DetalhesCasoScreen({ navigation, route }) {
           
           {caso.evidencias && caso.evidencias.length > 0 ? (
             caso.evidencias.map((evidencia, index) => (
-              <View key={evidencia._id} style={styles.evidenceItem}>
+              <TouchableOpacity 
+                key={evidencia._id} 
+                style={styles.evidenceItem}
+                onPress={() => handleEditarEvidencia(evidencia)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.evidenceHeader}>
-                  <Text style={styles.evidenceTitle}>Evidência {index + 1}</Text>
-                  <View style={styles.evidenceBadge}>
-                    <Text style={styles.evidenceBadgeText}>{evidencia.tipo}</Text>
+                  <View style={styles.evidenceInfo}>
+                    <Text style={styles.evidenceTitle}>Evidência {index + 1}</Text>
+                    <View style={styles.evidenceBadge}>
+                      <Text style={styles.evidenceBadgeText}>{evidencia.tipo}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.evidenceActions}>
+                    <TouchableOpacity
+                      style={styles.evidenceActionButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleEditarEvidencia(evidencia);
+                      }}
+                    >
+                      <Ionicons name="create-outline" size={16} color="#007AFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.evidenceActionButton, styles.deleteButton]}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleExcluirEvidencia(evidencia);
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+                    </TouchableOpacity>
                   </View>
                 </View>
                 
@@ -482,8 +570,13 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                       <Text style={styles.detailBold}>Localização:</Text> {evidencia.geolocalizacao.latitude}, {evidencia.geolocalizacao.longitude}
                     </Text>
                   )}
+                  {evidencia.coletadaPor && (
+                    <Text style={styles.evidenceDetail}>
+                      <Text style={styles.detailBold}>Coletada por:</Text> {evidencia.coletadaPor.username || evidencia.coletadaPor.email || 'Não informado'}
+                    </Text>
+                  )}
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           ) : (
             <View style={styles.emptySection}>
@@ -823,6 +916,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  evidenceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   evidenceTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -833,11 +930,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    marginLeft: 8,
   },
   evidenceBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     color: 'white',
+  },
+  evidenceActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  evidenceActionButton: {
+    padding: 4,
+    marginLeft: 8,
   },
   evidenceDetails: {
     flex: 1,

@@ -16,6 +16,7 @@ import DetalhesCasoScreen from './screens/DetalhesCasoScreen';
 import DetalhesRelatorioScreen from './screens/DetalhesRelatorioScreen';
 import EditarRelatorioScreen from './screens/EditarRelatorioScreen';
 import AdicionarEvidenciaScreen from './screens/AdicionarEvidenciaScreen';
+import EditarEvidenciaScreen from './screens/EditarEvidenciaScreen';
 import AdicionarVitimaScreen from './screens/AdicionarVitimaScreen';
 import EditarVitimaScreen from './screens/EditarVitimaScreen';
 import AdicionarRelatorioScreen from './screens/AdicionarRelatorioScreen';
@@ -55,6 +56,7 @@ function HomeStack() {
       <Stack.Screen name="DetalhesRelatorio" component={DetalhesRelatorioScreen} />
       <Stack.Screen name="EditarRelatorio" component={EditarRelatorioScreen} />
       <Stack.Screen name="AdicionarEvidencia" component={AdicionarEvidenciaScreen} />
+      <Stack.Screen name="EditarEvidencia" component={EditarEvidenciaScreen} />
       <Stack.Screen name="AdicionarVitima" component={AdicionarVitimaScreen} />
       <Stack.Screen name="EditarVitima" component={EditarVitimaScreen} />
       <Stack.Screen name="DetalhesVitima" component={DetalhesVitimaScreen} />
@@ -76,6 +78,7 @@ function CasosStack() {
       <Stack.Screen name="DetalhesRelatorio" component={DetalhesRelatorioScreen} />
       <Stack.Screen name="EditarRelatorio" component={EditarRelatorioScreen} />
       <Stack.Screen name="AdicionarEvidencia" component={AdicionarEvidenciaScreen} />
+      <Stack.Screen name="EditarEvidencia" component={EditarEvidenciaScreen} />
       <Stack.Screen name="AdicionarVitima" component={AdicionarVitimaScreen} />
       <Stack.Screen name="EditarVitima" component={EditarVitimaScreen} />
       <Stack.Screen name="DetalhesVitima" component={DetalhesVitimaScreen} />
