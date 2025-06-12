@@ -15,30 +15,19 @@ api.interceptors.request.use(
   async (config) => {
     try {
       const token = await AsyncStorage.getItem('@auth_token');
-      console.log('Interceptor - Token encontrado:', !!token);
-      console.log('Interceptor - Token completo:', token);
-      console.log('Interceptor - URL da requisição:', config.url);
-      console.log('Interceptor - Método:', config.method);
       
       if (token && token.trim() !== '') {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('Interceptor - Token adicionado ao header:', `Bearer ${token.substring(0, 20)}...`);
-      } else {
-        console.log('Interceptor - Nenhum token encontrado ou token vazio');
-        // Verificar se há outros tokens salvos
-        const allKeys = await AsyncStorage.getAllKeys();
-        console.log('Interceptor - Todas as chaves no AsyncStorage:', allKeys);
       }
       
-      console.log('Interceptor - Headers finais:', config.headers);
       return config;
     } catch (error) {
-      console.error('Interceptor - Erro ao recuperar token:', error);
+      console.error('Erro ao recuperar token:', error);
       return config;
     }
   },
   (error) => {
-    console.error('Interceptor - Erro na requisição:', error);
+    console.error('Erro na requisição:', error);
     return Promise.reject(error);
   }
 );
@@ -46,15 +35,10 @@ api.interceptors.request.use(
 // Interceptor para tratar erros de resposta
 api.interceptors.response.use(
   (response) => {
-    console.log('Interceptor - Resposta recebida:', response.status, response.config.url);
     return response;
   },
   async (error) => {
-    console.error('Interceptor - Erro na resposta:', error.response?.status, error.response?.config?.url);
-    console.error('Interceptor - Dados do erro:', error.response?.data);
-    
     if (error.response?.status === 401) {
-      console.log('Interceptor - Token expirado ou inválido, removendo dados de autenticação');
       // Token expirado ou inválido
       await AsyncStorage.removeItem('@auth_token');
       await AsyncStorage.removeItem('@user_data');
@@ -68,14 +52,10 @@ export const authService = {
   // Login
   login: async (email, password) => {
     try {
-      console.log('Login - Iniciando login para:', email);
       const response = await api.post('/auth/login', {
         email,
         password,
       });
-      
-      console.log('Login - Resposta completa:', response.data);
-      console.log('Login - Status da resposta:', response.status);
       
       // Extrair dados da estrutura correta da resposta
       let token = null;
@@ -84,44 +64,16 @@ export const authService = {
       if (response.data.user && response.data.user.token) {
         token = response.data.user.token;
         userData = response.data.user;
-        console.log('Login - Token encontrado em response.data.user.token');
-        console.log('Login - ID do usuário encontrado em response.data.user.id:', userData.id);
-      } else {
-        console.log('Login - Estrutura da resposta não reconhecida');
-        console.log('Login - Chaves disponíveis:', Object.keys(response.data));
       }
-      
-      console.log('Login - Token extraído:', !!token);
-      console.log('Login - Token completo:', token);
       
       if (token) {
         // Salvar token e dados do usuário
         await AsyncStorage.setItem('@auth_token', token);
         await AsyncStorage.setItem('@user_data', JSON.stringify(userData));
-        
-        console.log('Login - Token salvo no AsyncStorage');
-        console.log('Login - Dados do usuário salvos:', userData);
-        console.log('Login - ID do usuário:', userData.id);
-        
-        // Verificar se foi salvo corretamente
-        const savedToken = await AsyncStorage.getItem('@auth_token');
-        const savedUserData = await AsyncStorage.getItem('@user_data');
-        console.log('Login - Token verificado após salvar:', !!savedToken);
-        console.log('Login - Token verificado completo:', savedToken);
-        console.log('Login - Dados do usuário verificados após salvar:', savedUserData);
-        
-        if (savedUserData) {
-          const parsedSavedUserData = JSON.parse(savedUserData);
-          console.log('Login - Dados do usuário parseados após salvar:', parsedSavedUserData);
-          console.log('Login - ID do usuário após salvar:', parsedSavedUserData.id);
-        }
-      } else {
-        console.log('Login - ERRO: Nenhum token encontrado na resposta');
       }
       
       return response.data;
     } catch (error) {
-      console.error('Login - Erro:', error.response?.data || error.message);
       throw error.response?.data || { error: 'Erro de conexão' };
     }
   },
@@ -149,21 +101,15 @@ export const authService = {
   // Obter dados do usuário
   getUserData: async () => {
     try {
-      console.log('getUserData - Iniciando recuperação dos dados do usuário');
       const userData = await AsyncStorage.getItem('@user_data');
-      console.log('getUserData - Dados brutos recuperados:', userData);
       
       if (userData) {
-        const parsedUserData = JSON.parse(userData);
-        console.log('getUserData - Dados parseados:', parsedUserData);
-        console.log('getUserData - ID do usuário:', parsedUserData._id);
-        return parsedUserData;
+        return JSON.parse(userData);
       } else {
-        console.log('getUserData - Nenhum dado de usuário encontrado');
         return null;
       }
     } catch (error) {
-      console.error('getUserData - Erro ao recuperar dados do usuário:', error);
+      console.error('Erro ao recuperar dados do usuário:', error);
       return null;
     }
   },
@@ -190,25 +136,6 @@ export const casosService = {
     }
   },
 
-  // Criar caso
-  createCaso: async (casoData) => {
-    try {
-      console.log('createCaso - Iniciando criação do caso');
-      console.log('createCaso - Dados a serem enviados:', casoData);
-      
-      const response = await api.post('/casos', casoData);
-      
-      console.log('createCaso - Resposta recebida:', response.status);
-      console.log('createCaso - Dados retornados:', response.data);
-      
-      return response.data;
-    } catch (error) {
-      console.error('createCaso - Erro:', error.response?.data || error.message);
-      console.error('createCaso - Status do erro:', error.response?.status);
-      throw error.response?.data || { error: 'Erro ao criar caso' };
-    }
-  },
-
   // Obter caso por ID
   getCasoById: async (id) => {
     try {
@@ -216,6 +143,36 @@ export const casosService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao buscar caso' };
+    }
+  },
+
+  // Criar caso
+  createCaso: async (casoData) => {
+    try {
+      const response = await api.post('/casos', casoData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao criar caso' };
+    }
+  },
+
+  // Atualizar caso
+  updateCaso: async (id, casoData) => {
+    try {
+      const response = await api.put(`/casos/${id}`, casoData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao atualizar caso' };
+    }
+  },
+
+  // Excluir caso
+  deleteCaso: async (id) => {
+    try {
+      const response = await api.delete(`/casos/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao excluir caso' };
     }
   },
 };

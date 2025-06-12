@@ -17,7 +17,7 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { casosService } from '../services/api';
 
@@ -115,9 +115,13 @@ export default function CasosScreen() {
     }
   }, [searchText, searchField, statusFilter]);
 
-  useEffect(() => {
-    fetchCasos(1, true);
-  }, [fetchCasos]);
+  // Carregar casos quando a tela receber foco
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Tela de casos recebeu foco - recarregando lista');
+      fetchCasos(1, true);
+    }, [fetchCasos])
+  );
 
   const handleRefresh = () => {
     fetchCasos(1, true);
@@ -152,7 +156,9 @@ export default function CasosScreen() {
   };
 
   const handleCasoPress = (caso) => {
-    navigation.navigate('DetalhesCaso', { caso });
+    console.log('Clicou no caso:', caso);
+    console.log('ID do caso:', caso._id);
+    navigation.navigate('DetalhesCaso', { casoId: caso._id });
   };
 
   const handleSearch = () => {

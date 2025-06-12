@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authService } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext({});
 
@@ -54,6 +55,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Função para obter o token de autenticação
+  const getAuthToken = async () => {
+    try {
+      const token = await AsyncStorage.getItem('@auth_token');
+      console.log('getAuthToken - Token encontrado:', !!token);
+      return token;
+    } catch (error) {
+      console.error('getAuthToken - Erro ao recuperar token:', error);
+      return null;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -63,6 +76,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         checkAuthStatus,
+        getAuthToken,
       }}
     >
       {children}
