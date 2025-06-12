@@ -236,4 +236,57 @@ export const dashboardService = {
   },
 };
 
+// Funções para relatórios
+export const relatoriosService = {
+  // Listar relatórios
+  getRelatorios: async () => {
+    try {
+      const response = await api.get('/relatorios');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar relatórios' };
+    }
+  },
+
+  // Obter relatório por ID
+  getRelatorioById: async (id) => {
+    try {
+      const response = await api.get(`/relatorios/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao buscar relatório' };
+    }
+  },
+
+  // Criar relatório
+  createRelatorio: async (relatorioData) => {
+    try {
+      const response = await api.post('/relatorios', relatorioData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao criar relatório' };
+    }
+  },
+
+  // Atualizar relatório
+  updateRelatorio: async (id, relatorioData) => {
+    try {
+      const response = await api.put(`/relatorios/${id}`, relatorioData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao atualizar relatório' };
+    }
+  },
+
+  // Excluir relatório
+  deleteRelatorio: async (id) => {
+    try {
+      const response = await api.delete(`/relatorios/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Erro ao excluir relatório' };
+    }
+  },
+};
+
 export default api; 

@@ -88,6 +88,24 @@ export default function DetalhesCasoScreen({ navigation, route }) {
     }
   };
 
+  const handleAdicionarEvidencia = () => {
+    if (caso) {
+      navigation.navigate('AdicionarEvidencia', { casoId: caso._id });
+    }
+  };
+
+  const handleAdicionarVitima = () => {
+    if (caso) {
+      navigation.navigate('AdicionarVitima', { casoId: caso._id });
+    }
+  };
+
+  const handleAdicionarRelatorio = () => {
+    if (caso) {
+      navigation.navigate('AdicionarRelatorio', { casoId: caso._id });
+    }
+  };
+
   const handleCompartilhar = () => {
     Alert.alert(
       'Compartilhar',
@@ -276,14 +294,20 @@ export default function DetalhesCasoScreen({ navigation, route }) {
         </View>
 
         {/* Evidências */}
-        {caso.evidencias && caso.evidencias.length > 0 ? (
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="camera-outline" size={24} color="#8B5CF6" />
-              <Text style={styles.sectionTitle}>Evidências ({caso.evidencias.length})</Text>
-            </View>
-            
-            {caso.evidencias.map((evidencia, index) => (
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="camera-outline" size={24} color="#8B5CF6" />
+            <Text style={styles.sectionTitle}>
+              Evidências {caso.evidencias && caso.evidencias.length > 0 ? `(${caso.evidencias.length})` : ''}
+            </Text>
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: '#8B5CF6' }]} onPress={handleAdicionarEvidencia}>
+              <Ionicons name="add" size={20} color="white" />
+              <Text style={styles.addButtonText}>Adicionar</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {caso.evidencias && caso.evidencias.length > 0 ? (
+            caso.evidencias.map((evidencia, index) => (
               <View key={evidencia._id} style={styles.evidenceItem}>
                 <View style={styles.evidenceHeader}>
                   <Text style={styles.evidenceTitle}>Evidência {index + 1}</Text>
@@ -306,29 +330,29 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                   )}
                 </View>
               </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="camera-outline" size={24} color="#8B5CF6" />
-              <Text style={styles.sectionTitle}>Evidências</Text>
-            </View>
+            ))
+          ) : (
             <View style={styles.emptySection}>
               <Text style={styles.emptyText}>Nenhuma evidência cadastrada para este caso.</Text>
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Vítimas */}
-        {caso.vitimas && caso.vitimas.length > 0 ? (
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="person-outline" size={24} color="#10B981" />
-              <Text style={styles.sectionTitle}>Vítimas ({caso.vitimas.length})</Text>
-            </View>
-            
-            {caso.vitimas.map((vitima, index) => (
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="person-outline" size={24} color="#10B981" />
+            <Text style={styles.sectionTitle}>
+              Vítimas {caso.vitimas && caso.vitimas.length > 0 ? `(${caso.vitimas.length})` : ''}
+            </Text>
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: '#10B981' }]} onPress={handleAdicionarVitima}>
+              <Ionicons name="add" size={20} color="white" />
+              <Text style={styles.addButtonText}>Adicionar</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {caso.vitimas && caso.vitimas.length > 0 ? (
+            caso.vitimas.map((vitima, index) => (
               <View key={vitima._id} style={styles.victimItem}>
                 <View style={styles.victimHeader}>
                   <Text style={styles.victimTitle}>Vítima {index + 1}</Text>
@@ -360,28 +384,28 @@ export default function DetalhesCasoScreen({ navigation, route }) {
                   )}
                 </View>
               </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="person-outline" size={24} color="#10B981" />
-              <Text style={styles.sectionTitle}>Vítimas</Text>
-            </View>
+            ))
+          ) : (
             <View style={styles.emptySection}>
               <Text style={styles.emptyText}>Nenhuma vítima cadastrada para este caso.</Text>
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Relatório */}
-        {caso.relatorio ? (
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="document-text-outline" size={24} color="#3B82F6" />
-              <Text style={styles.sectionTitle}>Relatório</Text>
-            </View>
-            
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="document-text-outline" size={24} color="#3B82F6" />
+            <Text style={styles.sectionTitle}>Relatório</Text>
+            {!caso.relatorio && (
+              <TouchableOpacity style={[styles.addButton, { backgroundColor: '#3B82F6' }]} onPress={handleAdicionarRelatorio}>
+                <Ionicons name="add" size={20} color="white" />
+                <Text style={styles.addButtonText}>Adicionar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {caso.relatorio ? (
             <View style={styles.reportContainer}>
               <Text style={styles.reportTitle}>{caso.relatorio.titulo}</Text>
               <Text style={styles.reportDetail}>
@@ -392,18 +416,12 @@ export default function DetalhesCasoScreen({ navigation, route }) {
               </Text>
               <Text style={styles.reportContent}>{caso.relatorio.conteudo}</Text>
             </View>
-          </View>
-        ) : (
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="document-text-outline" size={24} color="#3B82F6" />
-              <Text style={styles.sectionTitle}>Relatório</Text>
-            </View>
+          ) : (
             <View style={styles.emptySection}>
               <Text style={styles.emptyText}>Nenhum relatório criado para este caso.</Text>
             </View>
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -705,5 +723,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 'auto',
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+    marginLeft: 4,
   },
 }); 
