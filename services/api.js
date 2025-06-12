@@ -90,10 +90,19 @@ export const authService = {
 
 // Funções para casos
 export const casosService = {
-  // Listar casos
-  getCasos: async () => {
+  // Listar casos com filtros e paginação
+  getCasos: async (params = {}) => {
     try {
-      const response = await api.get('/casos');
+      const queryParams = new URLSearchParams();
+      
+      // Adicionar parâmetros de filtro
+      if (params.titulo) queryParams.append('titulo', params.titulo);
+      if (params.descricao) queryParams.append('descricao', params.descricao);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+
+      const response = await api.get(`/casos?${queryParams.toString()}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Erro ao buscar casos' };

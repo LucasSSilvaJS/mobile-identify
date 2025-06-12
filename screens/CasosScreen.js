@@ -1,282 +1,419 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
-  TextInput,
+  Dimensions,
   Alert,
   useWindowDimensions,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
+  RefreshControl,
+  TextInput,
+  FlatList,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
+import { casosService } from '../services/api';
 
 export default function CasosScreen() {
   const { width, height } = useWindowDimensions();
   const [isLandscape, setIsLandscape] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const navigation = useNavigation();
+  const { logout, user } = useAuth();
+
+  // Estados para dados dos casos
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [casos, setCasos] = useState([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+
+  // Estados para filtros
+  const [searchText, setSearchText] = useState('');
+  const [searchField, setSearchField] = useState('titulo'); // 'titulo' ou 'descricao'
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showFiltros, setShowFiltros] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+
+  const statusOptions = [
+    { label: 'Todos os status', value: '' },
+    { label: 'Em andamento', value: 'Em andamento' },
+    { label: 'Finalizado', value: 'Finalizado' },
+    { label: 'Arquivado', value: 'Arquivado' },
+  ];
+
+  const getStatusLabel = (value) => {
+    const option = statusOptions.find(opt => opt.value === value);
+    return option ? option.label : 'Selecionar status';
+  };
 
   // Detectar mudanças de orientação e tamanho de tela
   useEffect(() => {
     const checkOrientation = () => {
       setIsLandscape(width > height);
-      setIsTablet(width >= 768); // Considera tablet a partir de 768px
+      setIsTablet(width >= 768);
     };
 
     checkOrientation();
   }, [width, height]);
 
-  const [searchText, setSearchText] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('Todos');
+  // Buscar casos
+  const fetchCasos = useCallback(async (page = 1, isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-  const [casos] = useState([
-    {
-      id: '1',
-      numero: 'CASE-001',
-      titulo: 'Roubo em Residência',
-      status: 'Em Andamento',
-      descricao: 'Roubo ocorrido em residência localizada na Rua das Flores, 123. O suspeito invadiu a propriedade durante a madrugada e levou objetos de valor.',
-      dataAbertura: '15/11/2024',
-      dataConclusao: '',
-      localizacao: 'Rua das Flores, 123 - Centro',
-      latitude: -23.5505,
-      longitude: -46.6333,
-      evidencia: 'Fotos do local, impressões digitais, câmeras de segurança',
-      vitimas: 'João Silva, Maria Santos',
-    },
-    {
-      id: '2',
-      numero: 'CASE-002',
-      titulo: 'Assalto a Banco',
-      status: 'Finalizado',
-      descricao: 'Assalto ocorrido no Banco Central da cidade. Suspeitos armados invadiram o estabelecimento e levaram uma quantia significativa.',
-      dataAbertura: '10/11/2024',
-      dataConclusao: '20/11/2024',
-      localizacao: 'Av. Principal, 456 - Centro',
-      latitude: -23.5600,
-      longitude: -46.6400,
-      evidencia: 'Vídeos de segurança, armas apreendidas, testemunhos',
-      vitimas: 'Funcionários do banco e clientes',
-    },
-    {
-      id: '3',
-      numero: 'CASE-003',
-      titulo: 'Fraude Eletrônica',
-      status: 'Arquivado',
-      descricao: 'Fraude eletrônica envolvendo transferências bancárias não autorizadas através de phishing.',
-      dataAbertura: '05/11/2024',
-      dataConclusao: '15/11/2024',
-      localizacao: 'Online - Múltiplas localizações',
-      latitude: -23.5400,
-      longitude: -46.6200,
-      evidencia: 'Logs de transações, emails fraudulentos, registros bancários',
-      vitimas: 'Carlos Oliveira',
-    },
-    {
-      id: '4',
-      numero: 'CASE-004',
-      titulo: 'Homicídio',
-      status: 'Em Andamento',
-      descricao: 'Homicídio ocorrido em área residencial. Vítima encontrada sem vida em sua residência.',
-      dataAbertura: '12/11/2024',
-      dataConclusao: '',
-      localizacao: 'Rua das Palmeiras, 789 - Bairro Norte',
-      latitude: -23.5700,
-      longitude: -46.6500,
-      evidencia: 'Laudo pericial, testemunhos, objetos do local',
-      vitimas: 'Ana Costa',
-    },
-    {
-      id: '5',
-      numero: 'CASE-005',
-      titulo: 'Tráfico de Drogas',
-      status: 'Em Andamento',
-      descricao: 'Operação de combate ao tráfico de drogas em área urbana. Apreensão de substâncias ilícitas.',
-      dataAbertura: '08/11/2024',
-      dataConclusao: '',
-      localizacao: 'Rua do Comércio, 321 - Zona Sul',
-      latitude: -23.5800,
-      longitude: -46.6600,
-      evidencia: 'Substâncias apreendidas, equipamentos, documentos',
-      vitimas: 'Suspeitos em investigação',
-    },
-  ]);
+      const params = {
+        page,
+        limit: 10,
+      };
 
-  const filtros = ['Todos', 'Em Andamento', 'Finalizados', 'Arquivados'];
+      // Adicionar filtros específicos
+      if (searchText.trim()) {
+        params[searchField] = searchText.trim();
+      }
+      
+      if (statusFilter) {
+        params.status = statusFilter;
+      }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Em Andamento':
-        return '#FF6B6B';
-      case 'Finalizado':
-        return '#51CF66';
-      case 'Arquivado':
-        return '#845EF7';
-      default:
-        return '#999';
+      const data = await casosService.getCasos(params);
+      
+      if (page === 1) {
+        setCasos(data.casos || data.data || []);
+      } else {
+        setCasos(prev => [...prev, ...(data.casos || data.data || [])]);
+      }
+      
+      setPagination(data.pagination || {
+        currentPage: page,
+        hasNextPage: (data.casos || data.data || []).length === 10,
+      });
+
+    } catch (error) {
+      console.error('Erro ao buscar casos:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os casos. Tente novamente.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  }, [searchText, searchField, statusFilter]);
+
+  useEffect(() => {
+    fetchCasos(1, true);
+  }, [fetchCasos]);
+
+  const handleRefresh = () => {
+    fetchCasos(1, true);
   };
 
-  const casosFiltrados = casos.filter(caso => {
-    const matchSearch = caso.titulo.toLowerCase().includes(searchText.toLowerCase()) ||
-                       caso.numero.toLowerCase().includes(searchText.toLowerCase());
-    const matchFilter = selectedFilter === 'Todos' || caso.status === selectedFilter;
-    return matchSearch && matchFilter;
-  });
-
-  const handleCasePress = (caso) => {
-    navigation.navigate('DetalhesCaso', { caso });
+  const handleLoadMore = () => {
+    if (pagination.hasNextPage && !loading) {
+      fetchCasos(pagination.currentPage + 1);
+    }
   };
 
   const handleCreateCase = () => {
     navigation.navigate('CriarCaso');
   };
 
-  const renderCaso = ({ item }) => (
+  const handleLogout = () => {
+    Alert.alert(
+      'Sair',
+      'Tem certeza que deseja sair da aplicação?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: logout,
+        },
+      ]
+    );
+  };
+
+  const handleCasoPress = (caso) => {
+    navigation.navigate('DetalhesCaso', { caso });
+  };
+
+  const handleSearch = () => {
+    fetchCasos(1, true);
+  };
+
+  const limparFiltros = () => {
+    setSearchText('');
+    setSearchField('titulo');
+    setStatusFilter('');
+    fetchCasos(1, true);
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Em andamento':
+        return '#FFA500';
+      case 'Finalizado':
+        return '#4CAF50';
+      case 'Arquivado':
+        return '#9E9E9E';
+      default:
+        return '#2196F3';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const renderCasoItem = ({ item }) => (
     <TouchableOpacity
-      style={[
-        styles.casoCard,
-        isTablet && styles.casoCardTablet
-      ]}
-      onPress={() => handleCasePress(item)}
+      style={styles.casoCard}
+      onPress={() => handleCasoPress(item)}
     >
       <View style={styles.casoHeader}>
         <View style={styles.casoInfo}>
-          <Text style={[
-            styles.casoNumero,
-            isTablet && styles.casoNumeroTablet
-          ]}>{item.numero}</Text>
-          <Text style={[
-            styles.casoTitulo,
-            isTablet && styles.casoTituloTablet
-          ]}>{item.titulo}</Text>
+          <Text style={styles.casoNumero}>{item.numero || `CASE-${item._id?.slice(-6) || item.id?.slice(-6)}`}</Text>
+          <Text style={styles.casoTitulo}>{item.titulo}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={[
-            styles.statusText,
-            isTablet && styles.statusTextTablet
-          ]}>{item.status}</Text>
+          <Text style={styles.statusText}>{item.status}</Text>
         </View>
       </View>
-
-      <View style={styles.casoDescription}>
-        <Text style={[
-          styles.descriptionText,
-          isTablet && styles.descriptionTextTablet
-        ]} numberOfLines={3}>
-          {item.descricao}
-        </Text>
-      </View>
-
-      <View style={styles.casoFooter}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="chevron-forward" size={isTablet ? 24 : 20} color="#007AFF" />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderFiltro = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.filtroButton,
-        selectedFilter === item && styles.filtroButtonActive,
-        isTablet && styles.filtroButtonTablet
-      ]}
-      onPress={() => setSelectedFilter(item)}
-    >
-      <Text style={[
-        styles.filtroText,
-        selectedFilter === item && styles.filtroTextActive,
-        isTablet && styles.filtroTextTablet
-      ]}>
-        {item}
+      
+      <Text style={styles.casoDescricao} numberOfLines={2}>
+        {item.descricao}
       </Text>
+      
+      <View style={styles.casoFooter}>
+        <View style={styles.casoMeta}>
+          {item.evidencias && item.evidencias.length > 0 && (
+            <View style={styles.metaItem}>
+              <Ionicons name="document-text-outline" size={16} color="#666" />
+              <Text style={styles.metaText}>
+                {item.evidencias.length} evidência{item.evidencias.length > 1 ? 's' : ''}
+              </Text>
+            </View>
+          )}
+          
+          {item.vitimas && item.vitimas.length > 0 && (
+            <View style={styles.metaItem}>
+              <Ionicons name="person-outline" size={16} color="#666" />
+              <Text style={styles.metaText}>
+                {item.vitimas.length} vítima{item.vitimas.length > 1 ? 's' : ''}
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.casoDateContainer}>
+          <Ionicons name="calendar-outline" size={14} color="#999" />
+          <Text style={styles.casoDate}>
+            Criado em: {formatDate(item.createdAt)}
+          </Text>
+        </View>
+      </View>
     </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={[
-        styles.header,
-        isTablet && styles.headerTablet
-      ]}>
-        <Text style={[
-          styles.headerTitle,
-          isTablet && styles.headerTitleTablet
-        ]}>Casos</Text>
-        <Text style={[
-          styles.headerSubtitle,
-          isTablet && styles.headerSubtitleTablet
-        ]}>{casosFiltrados.length} casos encontrados</Text>
-      </View>
-
-      {/* Barra de Busca */}
-      <View style={[
-        styles.searchContainer,
-        isTablet && styles.searchContainerTablet
-      ]}>
-        <Ionicons name="search" size={isTablet ? 24 : 20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          style={[
-            styles.searchInput,
-            isTablet && styles.searchInputTablet
-          ]}
-          placeholder="Buscar casos..."
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholderTextColor="#999"
-        />
-        {searchText.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchText('')}>
-            <Ionicons name="close-circle" size={isTablet ? 24 : 20} color="#666" />
-          </TouchableOpacity>
-        )}
+  const renderSearchBar = () => (
+    <View style={styles.searchContainer}>
+      <View style={styles.searchRow}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Pesquisar casos..."
+            value={searchText}
+            onChangeText={setSearchText}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
+          {searchText.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchText('')}>
+              <Ionicons name="close-circle" size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setShowFiltros(!showFiltros)}
+        >
+          <Ionicons name="filter" size={20} color="#007AFF" />
+        </TouchableOpacity>
       </View>
 
       {/* Filtros */}
-      <View style={styles.filtrosContainer}>
-        <FlatList
-          data={filtros}
-          renderItem={renderFiltro}
-          keyExtractor={(item) => item}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.filtrosList,
-            isTablet && styles.filtrosListTablet
-          ]}
-        />
-      </View>
+      {showFiltros && (
+        <View style={styles.filtersContainer}>
+          <Text style={styles.filterLabel}>Opções de pesquisa:</Text>
+          
+          <View style={styles.searchOptionsRow}>
+            <TouchableOpacity
+              style={[
+                styles.searchOption,
+                searchField === 'titulo' && styles.searchOptionActive
+              ]}
+              onPress={() => setSearchField('titulo')}
+            >
+              <Text style={[
+                styles.searchOptionText,
+                searchField === 'titulo' && styles.searchOptionTextActive
+              ]}>
+                Título
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.searchOption,
+                searchField === 'descricao' && styles.searchOptionActive
+              ]}
+              onPress={() => setSearchField('descricao')}
+            >
+              <Text style={[
+                styles.searchOptionText,
+                searchField === 'descricao' && styles.searchOptionTextActive
+              ]}>
+                Descrição
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-      {/* Lista de Casos */}
-      <FlatList
-        data={casosFiltrados}
-        renderItem={renderCaso}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.casosList,
-          isTablet && styles.casosListTablet
-        ]}
-        showsVerticalScrollIndicator={false}
-        numColumns={isTablet && isLandscape ? 2 : 1}
-      />
+          <View style={styles.filterSeparator} />
 
-      {/* Botão Flutuante */}
-      <TouchableOpacity
-        style={[
-          styles.fab,
-          isTablet && styles.fabTablet
-        ]}
-        onPress={handleCreateCase}
+          <Text style={styles.filterLabel}>Filtrar por status:</Text>
+          
+          <TouchableOpacity
+            style={styles.statusSelector}
+            onPress={() => setShowStatusModal(true)}
+          >
+            <Text style={styles.statusSelectorText}>
+              {getStatusLabel(statusFilter)}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color="#666" />
+          </TouchableOpacity>
+          
+          {(searchText || statusFilter) && (
+            <TouchableOpacity style={styles.clearFilterButton} onPress={limparFiltros}>
+              <Text style={styles.clearFilterButtonText}>Limpar filtros</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Modal para seleção de status */}
+      <Modal
+        visible={showStatusModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowStatusModal(false)}
       >
-        <Ionicons name="add" size={isTablet ? 36 : 30} color="#fff" />
-      </TouchableOpacity>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecionar Status</Text>
+              <TouchableOpacity onPress={() => setShowStatusModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalBody}>
+              {statusOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.statusOption,
+                    statusFilter === option.value && styles.statusOptionSelected
+                  ]}
+                  onPress={() => {
+                    setStatusFilter(option.value);
+                    setShowStatusModal(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.statusOptionText,
+                    statusFilter === option.value && styles.statusOptionTextSelected
+                  ]}>
+                    {option.label}
+                  </Text>
+                  {statusFilter === option.value && (
+                    <Ionicons name="checkmark" size={20} color="#007AFF" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="document-outline" size={64} color="#ccc" />
+      <Text style={styles.emptyText}>
+        {searchText || statusFilter 
+          ? 'Nenhum caso encontrado com os filtros aplicados'
+          : 'Nenhum caso encontrado'
+        }
+      </Text>
+      {(searchText || statusFilter) && (
+        <TouchableOpacity style={styles.clearButton} onPress={limparFiltros}>
+          <Text style={styles.clearButtonText}>Limpar filtros</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  const renderFooter = () => {
+    if (!pagination.hasNextPage) return null;
+    return (
+      <View style={styles.footer}>
+        <ActivityIndicator size="small" color="#007AFF" />
+        <Text style={styles.footerText}>Carregando mais casos...</Text>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {renderSearchBar()}
+      
+      <FlatList
+        data={casos}
+        renderItem={renderCasoItem}
+        keyExtractor={(item) => item._id?.toString() || item.id?.toString()}
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.1}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
+        showsVerticalScrollIndicator={false}
+      />
     </SafeAreaView>
   );
 }
@@ -284,118 +421,138 @@ export default function CasosScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 20 : 30,
-    backgroundColor: '#fff',
-  },
-  headerTablet: {
-    paddingHorizontal: 40,
-    paddingTop: Platform.OS === 'ios' ? 30 : 50,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  headerTitleTablet: {
-    fontSize: 36,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
-  },
-  headerSubtitleTablet: {
-    fontSize: 20,
+    backgroundColor: '#f5f5f5',
   },
   searchContainer: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    margin: 20,
-    marginTop: 10,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    marginBottom: 12,
   },
-  searchContainerTablet: {
-    marginHorizontal: 40,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginRight: 12,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
+    height: 40,
     fontSize: 16,
     color: '#333',
   },
-  searchInputTablet: {
-    fontSize: 18,
+  filterButton: {
+    padding: 8,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
   },
-  filtrosContainer: {
-    marginBottom: 10,
+  searchOptionsContainer: {
+    marginBottom: 12,
   },
-  filtrosList: {
-    paddingHorizontal: 20,
+  searchOptionsLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
   },
-  filtrosListTablet: {
-    paddingHorizontal: 40,
+  searchOptionsRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  filtroButton: {
-    paddingHorizontal: 20,
+  searchOption: {
+    flex: 1,
     paddingVertical: 8,
-    marginRight: 10,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
   },
-  filtroButtonTablet: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    marginRight: 15,
-  },
-  filtroButtonActive: {
+  searchOptionActive: {
     backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
   },
-  filtroText: {
+  searchOptionText: {
     fontSize: 14,
     color: '#666',
   },
-  filtroTextTablet: {
+  searchOptionTextActive: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  filtersContainer: {
+    backgroundColor: '#f8f8f8',
+    padding: 12,
+    borderRadius: 8,
+  },
+  filterLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  statusSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  statusSelectorText: {
     fontSize: 16,
+    color: '#333',
+    flex: 1,
   },
-  filtroTextActive: {
-    color: '#fff',
+  filterActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  casosList: {
-    padding: 20,
-    paddingTop: 0,
-    paddingBottom: Platform.OS === 'ios' ? 140 : 120,
+  applyFilterButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
   },
-  casosListTablet: {
-    paddingHorizontal: 40,
-    paddingBottom: Platform.OS === 'ios' ? 160 : 140,
+  applyFilterButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  clearFilterButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  clearFilterButtonText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  listContainer: {
+    padding: 16,
+    paddingBottom: 100, // Espaço para a tab bar
   },
   casoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     borderRadius: 12,
-    padding: 20,
-    marginBottom: 15,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -404,96 +561,164 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-  },
-  casoCardTablet: {
-    padding: 30,
-    marginBottom: 20,
-    marginHorizontal: 10,
-    flex: 1,
   },
   casoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 15,
+    marginBottom: 8,
   },
   casoInfo: {
     flex: 1,
+    marginRight: 8,
   },
   casoNumero: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: 'bold',
+    fontSize: 12,
+    color: '#666',
     marginBottom: 4,
-  },
-  casoNumeroTablet: {
-    fontSize: 16,
   },
   casoTitulo: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#333',
   },
-  casoTituloTablet: {
-    fontSize: 22,
-  },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 12,
+    minWidth: 80,
+    alignItems: 'center',
   },
   statusText: {
-    color: '#fff',
+    color: 'white',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  statusTextTablet: {
-    fontSize: 14,
-  },
-  casoDescription: {
-    marginBottom: 15,
-  },
-  descriptionText: {
+  casoDescricao: {
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
-  },
-  descriptionTextTablet: {
-    fontSize: 16,
-    lineHeight: 24,
+    marginBottom: 12,
   },
   casoFooter: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  casoMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 8,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  clearButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  clearButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  footerText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    width: '90%',
+    maxHeight: '70%',
+    margin: 20,
+  },
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
-  actionButton: {
-    padding: 5,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
   },
-  fab: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 120 : 100,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
+  modalBody: {
+    padding: 20,
+  },
+  statusOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  fabTablet: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    bottom: Platform.OS === 'ios' ? 140 : 120,
-    right: 30,
+  statusOptionSelected: {
+    backgroundColor: '#f8f9ff',
+  },
+  statusOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  statusOptionTextSelected: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  casoDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  casoDate: {
+    fontSize: 12,
+    color: '#999',
+    marginLeft: 8,
+  },
+  filterSeparator: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginVertical: 12,
   },
 }); 
