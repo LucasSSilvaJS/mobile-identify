@@ -10,12 +10,18 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
+import MapView, { Marker } from 'react-native-maps';
 import { useEvidencias } from '../hooks/useEvidencias';
 import { useAuth } from '../contexts/AuthContext';
+
+const { width, height } = Dimensions.get('window');
 
 export default function AdicionarEvidenciaScreen({ navigation, route }) {
   const { casoId } = route.params || {};
@@ -25,9 +31,16 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
   const [tipo, setTipo] = useState('');
   const [status, setStatus] = useState('Em análise');
   const [dataColeta, setDataColeta] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: -23.55052,
+    longitude: -46.633308,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
 
   const tiposEvidencia = [
     'Foto',
@@ -47,41 +60,67 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
 
   const statusOptions = ['Em análise', 'Concluído'];
 
-  // Obter localização atual
-  const obterLocalizacao = async () => {
+  // Obter localização atual ao carregar a tela
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
+  const getCurrentLocation = async () => {
     try {
-      setIsGettingLocation(true);
-      
-      // Verificar permissões
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permissão Negada',
-          'É necessário permitir o acesso à localização para obter as coordenadas da evidência.'
-        );
+        Alert.alert('Permissão negada', 'Permissão de localização é necessária para usar esta funcionalidade.');
         return;
       }
 
-      // Obter localização
-      let location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      setLatitude(location.coords.latitude.toString());
-      setLongitude(location.coords.longitude.toString());
+      let location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
       
-      Alert.alert(
-        'Localização Obtida',
-        'Coordenadas capturadas com sucesso!'
-      );
+      setUserLocation({ latitude, longitude });
+      setMapRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      });
+      setSelectedLocation({ latitude, longitude });
     } catch (error) {
       console.error('Erro ao obter localização:', error);
+      Alert.alert('Erro', 'Não foi possível obter sua localização atual.');
+    }
+  };
+
+  const handleMapPress = (event) => {
+    const { coordinate } = event.nativeEvent;
+    setSelectedLocation(coordinate);
+  };
+
+  const handleConfirmLocation = () => {
+    if (selectedLocation) {
+      setShowMapPicker(false);
       Alert.alert(
-        'Erro',
-        'Não foi possível obter a localização. Verifique se o GPS está ativado.'
+        'Localização Confirmada',
+        `Latitude: ${selectedLocation.latitude.toFixed(6)}, Longitude: ${selectedLocation.longitude.toFixed(6)}`
       );
-    } finally {
-      setIsGettingLocation(false);
+    }
+  };
+
+  const handleOpenMapPicker = () => {
+    if (userLocation) {
+      setShowMapPicker(true);
+    } else {
+      Alert.alert('Erro', 'Aguarde a localização ser carregada ou verifique as permissões.');
+    }
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      const currentDate = selectedDate || new Date();
+      const formattedDate = currentDate.toLocaleDateString('pt-BR');
+      setDataColeta(formattedDate);
     }
   };
 
@@ -93,19 +132,12 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
     }
     
     if (!dataColeta) {
-      Alert.alert('Erro', 'Por favor, informe a data de coleta.');
+      Alert.alert('Erro', 'Por favor, selecione a data de coleta.');
       return false;
     }
     
-    if (!latitude || !longitude) {
-      Alert.alert('Erro', 'Por favor, obtenha a localização da evidência.');
-      return false;
-    }
-
-    // Validar formato da data
-    const dataRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-    if (!dataRegex.test(dataColeta)) {
-      Alert.alert('Erro', 'Por favor, informe a data no formato DD/MM/AAAA.');
+    if (!selectedLocation) {
+      Alert.alert('Erro', 'Por favor, selecione uma localização no mapa.');
       return false;
     }
 
@@ -114,8 +146,14 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
 
   // Converter data para formato ISO
   const converterDataParaISO = (dataString) => {
-    const [dia, mes, ano] = dataString.split('/');
-    return new Date(ano, mes - 1, dia).toISOString();
+    if (!dataString) return null;
+    
+    // Converte DD/MM/AAAA para YYYY-MM-DD
+    const partes = dataString.split('/');
+    if (partes.length === 3) {
+      return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+    }
+    return null;
   };
 
   const handleSalvar = async () => {
@@ -127,8 +165,8 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
         dataColeta: converterDataParaISO(dataColeta),
         status,
         coletadaPor: user?.id || user?._id,
-        latitude,
-        longitude,
+        latitude: selectedLocation.latitude.toString(),
+        longitude: selectedLocation.longitude.toString(),
         casoId
       };
 
@@ -207,60 +245,42 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
 
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Data de Coleta *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={dataColeta}
-              onChangeText={setDataColeta}
-              placeholder="DD/MM/AAAA"
-              placeholderTextColor="#999"
-              keyboardType="numeric"
-              maxLength={10}
-            />
+            <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+              <View style={styles.dateInput}>
+                <Text style={dataColeta ? styles.dateText : styles.placeholderTextDate}>
+                  {dataColeta || "DD/MM/AAAA"}
+                </Text>
+                <Ionicons name="calendar" size={20} color="#999" />
+              </View>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                testID="datePickerColeta"
+                value={dataColeta ? new Date(dataColeta.split('/').reverse().join('-')) : new Date()}
+                mode="date"
+                display="default"
+                onChange={onDateChange}
+              />
+            )}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Localização *</Text>
-            <View style={styles.locationContainer}>
-              <View style={styles.coordinateInputs}>
-                <View style={styles.coordinateInput}>
-                  <Text style={styles.coordinateLabel}>Latitude</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={latitude}
-                    onChangeText={setLatitude}
-                    placeholder="Ex: -23.5505"
-                    placeholderTextColor="#999"
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={styles.coordinateInput}>
-                  <Text style={styles.coordinateLabel}>Longitude</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={longitude}
-                    onChangeText={setLongitude}
-                    placeholder="Ex: -46.6333"
-                    placeholderTextColor="#999"
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-              
-              <TouchableOpacity 
-                style={styles.locationButton} 
-                onPress={obterLocalizacao}
-                disabled={isGettingLocation}
-              >
-                {isGettingLocation ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Ionicons name="location" size={20} color="#fff" />
-                )}
-                <Text style={styles.locationButtonText}>
-                  {isGettingLocation ? 'Obtendo...' : 'Obter Localização'}
+            <TouchableOpacity
+              style={styles.mapButton}
+              onPress={handleOpenMapPicker}
+            >
+              <Ionicons name="map" size={20} color="#fff" />
+              <Text style={styles.mapButtonText}>Selecionar no Mapa</Text>
+            </TouchableOpacity>
+            {selectedLocation ? (
+              <View style={styles.coordenadasContainer}>
+                <Text style={styles.coordenadasLabel}>Localização selecionada:</Text>
+                <Text style={styles.coordenadasText}>
+                  Latitude: {selectedLocation.latitude.toFixed(6)}, Longitude: {selectedLocation.longitude.toFixed(6)}
                 </Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+            ) : null}
           </View>
 
           <TouchableOpacity 
@@ -279,6 +299,41 @@ export default function AdicionarEvidenciaScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={showMapPicker}
+        onRequestClose={() => setShowMapPicker(false)}
+      >
+        <SafeAreaView style={styles.mapModalContainer}>
+          <View style={styles.mapModalHeader}>
+            <TouchableOpacity onPress={() => setShowMapPicker(false)}>
+              <Text style={styles.mapModalButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+            <Text style={styles.mapModalTitle}>Selecionar Localização</Text>
+            <TouchableOpacity onPress={handleConfirmLocation}>
+              <Text style={styles.mapModalButtonText}>Confirmar</Text>
+            </TouchableOpacity>
+          </View>
+          <MapView
+            style={styles.map}
+            region={mapRegion}
+            onPress={handleMapPress}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+          >
+            {selectedLocation && (
+              <Marker
+                coordinate={selectedLocation}
+                pinColor="red"
+                draggable
+                onDragEnd={(e) => setSelectedLocation(e.nativeEvent.coordinate)}
+              />
+            )}
+          </MapView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -335,45 +390,55 @@ const styles = StyleSheet.create({
     height: 50,
     width: '100%',
   },
-  textInput: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#333',
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: '#fff',
+    justifyContent: 'space-between',
   },
-  locationContainer: {
-    gap: 15,
+  dateText: {
+    fontSize: 16,
+    color: '#333',
   },
-  coordinateInputs: {
-    flexDirection: 'row',
-    gap: 10,
+  placeholderTextDate: {
+    fontSize: 16,
+    color: '#999',
   },
-  coordinateInput: {
-    flex: 1,
-  },
-  coordinateLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-    marginBottom: 5,
-  },
-  locationButton: {
+  mapButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#28a745',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
     gap: 8,
   },
-  locationButtonText: {
+  mapButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  coordenadasContainer: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: '#e8f4fd',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#b3d9ff',
+  },
+  coordenadasLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  coordenadasText: {
+    fontSize: 14,
+    color: '#333',
   },
   saveButton: {
     flexDirection: 'row',
@@ -393,5 +458,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
+  },
+  mapModalContainer: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? 0 : 40,
+  },
+  mapModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  mapModalButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+  },
+  mapModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  map: {
+    flex: 1,
   },
 }); 
